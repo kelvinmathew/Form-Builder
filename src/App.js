@@ -134,7 +134,7 @@ const App = () => {
         className="navbar sticky-top bg-white border-bottom mb-4" 
         style={{ zIndex: 1000, padding: "0.75rem 0" }}
       >
-        <div className="container px-4 px-lg-5">
+        <div className=" px-4 px-lg-5">
           <span 
             className="navbar-brand d-flex align-items-center gap-2 fw-bold mb-0 text-dark" 
             style={{ cursor: "pointer", fontSize: "1.59rem", letterSpacing: "-0.1px" }} 
@@ -158,7 +158,7 @@ const App = () => {
         </div>
       </nav>
 
-      <div className="container">
+      <div className="">
         {view === "dashboard" && (
           <Dashboard 
             forms={forms} 

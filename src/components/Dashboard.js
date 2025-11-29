@@ -40,7 +40,7 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
       </div>
 
       {/* --- CONTENT SECTION --- */}
-      <div className="container px-4 px-lg-5 py-5">
+      <div className=" px-4 px-lg-5 py-5">
 
         {/* Empty State */}
         {forms.length === 0 ? (
