@@ -1,25 +1,195 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap-icons/font/bootstrap-icons.css";
+import "font-awesome/css/font-awesome.min.css"; 
+import Dashboard from "./components/Dashboard";
+import FormBuilder from "./components/FormBuilder";
+import FormEntryManager from "./components/FormEntryManager";
+import "./App.css";
 
-function App() {
+const App = () => {
+  // Views: 'dashboard', 'builder', 'manager'
+  const [view, setView] = useState("dashboard");
+  
+  // Data State
+  const [forms, setForms] = useState([]);
+  const [responses, setResponses] = useState({});
+  const [selectedFormId, setSelectedFormId] = useState(null);
+
+  // --- Persistence Logic ---
+  useEffect(() => {
+    const savedForms = localStorage.getItem("app_forms");
+    const savedResponses = localStorage.getItem("app_responses");
+    if (savedForms) setForms(JSON.parse(savedForms));
+    if (savedResponses) setResponses(JSON.parse(savedResponses));
+  }, []);
+
+  const saveData = (newForms, newResponses) => {
+    if (newForms) {
+      setForms(newForms);
+      localStorage.setItem("app_forms", JSON.stringify(newForms));
+    }
+    if (newResponses) {
+      setResponses(newResponses);
+      localStorage.setItem("app_responses", JSON.stringify(newResponses));
+    }
+  };
+
+  // --- Actions ---
+
+  // 1. Create/Edit Form
+  const handleOpenBuilder = (formId = null) => {
+    setSelectedFormId(formId);
+    setView("builder");
+  };
+
+  const handleSaveForm = (formData) => {
+    let updatedForms;
+    if (selectedFormId) {
+      updatedForms = forms.map(f => f.id === selectedFormId ? { ...formData, id: selectedFormId } : f);
+    } else {
+      updatedForms = [...forms, { ...formData, id: Date.now(), createdAt: new Date().toLocaleDateString() }];
+    }
+    saveData(updatedForms, null);
+    setView("dashboard");
+  };
+
+  // 2. Delete Form
+  const handleDeleteForm = (id) => {
+    if (window.confirm("Delete this form and all its data?")) {
+      const updatedForms = forms.filter(f => f.id !== id);
+      const updatedResponses = { ...responses };
+      delete updatedResponses[id];
+      saveData(updatedForms, updatedResponses);
+    }
+  };
+
+  // 3. Open Entry Manager (The "Page 2")
+  const handleOpenManager = (id) => {
+    setSelectedFormId(id);
+    setView("manager");
+  };
+
+  // 4. Submit New Row (Create)
+  const handleSubmitEntry = (data) => {
+    const currentList = responses[selectedFormId] || [];
+    // Add unique ID to row if not present (though FormEntryManager usually adds it)
+    const newRow = { ...data, _rowId: data._rowId || Date.now().toString() }; 
+    const updatedResponses = { 
+      ...responses, 
+      [selectedFormId]: [...currentList, newRow] 
+    };
+    saveData(null, updatedResponses);
+  };
+
+  // 5. Update Existing Row (Edit) - ✅ NEW ADDITION
+  const handleUpdateEntry = (updatedEntry) => {
+    const currentList = responses[selectedFormId] || [];
+    
+    // Map through list and replace the specific row by ID
+    const updatedList = currentList.map((row) => 
+      row._rowId === updatedEntry._rowId ? updatedEntry : row
+    );
+
+    const updatedResponses = { 
+      ...responses, 
+      [selectedFormId]: updatedList 
+    };
+    saveData(null, updatedResponses);
+  };
+
+  // 6. Delete Row
+  const handleDeleteEntry = (rowId) => {
+    if (!window.confirm("Delete this entry?")) return;
+    const currentList = responses[selectedFormId] || [];
+    const updatedList = currentList.filter(row => row._rowId !== rowId);
+    const updatedResponses = { 
+      ...responses, 
+      [selectedFormId]: updatedList 
+    };
+    saveData(null, updatedResponses);
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="app-container bg-light min-vh-100">
+      
+      {/* ✅ CSS FIX: Scale everything to 80% size */}
+      <style>
+        {`
+          html {
+            font-size: 12.8px; /* 80% of standard 16px */
+          }
+          body {
+            font-size: 1rem;
+          }
+          /* Ensure icons don't get too tiny */
+          .bi {
+             font-size: 1.1rem; 
+          }
+        `}
+      </style>
+
+      {/* Navbar */}
+      <nav 
+        className="navbar sticky-top bg-white border-bottom mb-4" 
+        style={{ zIndex: 1000, padding: "0.75rem 0" }}
+      >
+        <div className="container px-4 px-lg-5">
+          <span 
+            className="navbar-brand d-flex align-items-center gap-2 fw-bold mb-0 text-dark" 
+            style={{ cursor: "pointer", fontSize: "1.59rem", letterSpacing: "-0.1px" }} 
+            onClick={() => setView("dashboard")}
+          >
+            {/* Modern Logo Mark */}
+            <div 
+              className="d-flex align-items-center justify-content-center rounded shadow-sm" 
+              style={{ 
+                width: "38px", 
+                height: "41px", 
+                background: "linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)", // Indigo gradient
+                color: "white" 
+              }}
+            >
+              <i className="bi bi-grid-3x3-gap-fill" style={{ fontSize: "0.95rem" }}></i>
+            </div>
+            
+            FormManager
+          </span>
+        </div>
+      </nav>
+
+      <div className="container">
+        {view === "dashboard" && (
+          <Dashboard 
+            forms={forms} 
+            onCreate={() => handleOpenBuilder(null)}
+            onEdit={handleOpenBuilder}
+            onDelete={handleDeleteForm}
+            onOpen={handleOpenManager}
+          />
+        )}
+
+        {view === "builder" && (
+          <FormBuilder 
+            initialData={forms.find(f => f.id === selectedFormId)}
+            onSave={handleSaveForm}
+            onCancel={() => setView("dashboard")}
+          />
+        )}
+
+        {view === "manager" && (
+          <FormEntryManager 
+            form={forms.find(f => f.id === selectedFormId)}
+            entries={responses[selectedFormId] || []}
+            onSubmit={handleSubmitEntry}
+            onUpdate={handleUpdateEntry} // ✅ Passed the update handler
+            onDeleteRow={handleDeleteEntry}
+            onBack={() => setView("dashboard")}
+          />
+        )}
+      </div>
     </div>
   );
-}
+};
 
 export default App;
