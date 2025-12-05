@@ -239,7 +239,23 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                 const conf = allComponents.find(c => c.key === key);
                 let val = (conf?.type === 'calculated') ? calculateCellValue(row, conf) : row[key];
                 
-                // USE HELPER to fix [] brackets issue
+                // --- FIX: Map Value IDs to Labels for Select/Radio/Checkbox ---
+                if (conf && (conf.type === 'select' || conf.type === 'radio' || conf.type === 'checkbox')) {
+                    const options = conf.values || conf.data?.values || [];
+                    if (options.length > 0) {
+                        if (Array.isArray(val)) {
+                            val = val.map(v => {
+                                const match = options.find(opt => opt.value === v);
+                                return match ? match.label : v;
+                            });
+                        } else {
+                            const match = options.find(opt => opt.value === val);
+                            if (match) val = match.label;
+                        }
+                    }
+                }
+
+                // USE HELPER to fix [] brackets issue and stringify objects
                 rData.push(formatExportValue(val));
             });
 
@@ -299,6 +315,23 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
             columnOrder.forEach(key => {
                 const conf = allComponents.find(c => c.key === key);
                 let val = (conf?.type === 'calculated') ? calculateCellValue(row, conf) : row[key];
+
+                // --- FIX: Map Value IDs to Labels for Select/Radio/Checkbox ---
+                if (conf && (conf.type === 'select' || conf.type === 'radio' || conf.type === 'checkbox')) {
+                    const options = conf.values || conf.data?.values || [];
+                    if (options.length > 0) {
+                        if (Array.isArray(val)) {
+                            val = val.map(v => {
+                                const match = options.find(opt => opt.value === v);
+                                return match ? match.label : v;
+                            });
+                        } else {
+                            const match = options.find(opt => opt.value === val);
+                            if (match) val = match.label;
+                        }
+                    }
+                }
+
                 // USE HELPER here too
                 r.push(formatExportValue(val));
             });

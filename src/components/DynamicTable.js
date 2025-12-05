@@ -247,7 +247,7 @@ const DynamicTable = ({
                                                 {/* Delete Icon for Custom Columns */}
                                                 {isCustom && (
                                                     <div 
-                                                        className="d-inline-flex align-items-center justify-content-center ms-1 text-danger bg-danger-subtle rounded-circle"
+                                                        className="d-inline-flex align-items-center justify-content-center ms-1 text-danger bg-danger-subtle rounded-circle "
                                                         style={{width: '19px', height: '19px', cursor: 'pointer', transition: 'all 0.2s'}}
                                                         onClick={(e) => { e.stopPropagation(); setColumnToDelete(key); }} 
                                                         title="Delete Column"
