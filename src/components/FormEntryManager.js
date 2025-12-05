@@ -192,7 +192,20 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         return comp ? comp.label : key;
     };
 
-    // --- UPDATED EXCEL EXPORT (Respects DN/Remarks visibility) ---
+    // --- HELPER: Clean up arrays (Checkboxes) and Objects for Export ---
+    const formatExportValue = (val) => {
+        if (val === undefined || val === null) return "";
+        // Fix: Join arrays with commas so they don't appear as ["Item"] or [object Object]
+        if (Array.isArray(val)) {
+            return val.map(item => typeof item === 'object' ? item.label || item.value || JSON.stringify(item) : item).join(", "); 
+        }
+        if (typeof val === 'object') {
+            return JSON.stringify(val);
+        }
+        return val;
+    };
+
+    // --- UPDATED EXCEL EXPORT ---
     const handleExportExcel = () => {
         const sheetData = [];
         sheetData.push([form.title || "Form Report", ""]);
@@ -225,7 +238,9 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
             columnOrder.forEach(key => {
                 const conf = allComponents.find(c => c.key === key);
                 let val = (conf?.type === 'calculated') ? calculateCellValue(row, conf) : row[key];
-                rData.push(typeof val === 'object' ? JSON.stringify(val) : (val || ""));
+                
+                // USE HELPER to fix [] brackets issue
+                rData.push(formatExportValue(val));
             });
 
             if (showRemarksColumn) {
@@ -237,12 +252,15 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
 
         sheetData.push(["", ""]);
         
+        // 3. Footer Logic (Vertical / Line-by-Line)
         (pdfLayout.footers || []).forEach(f => { 
             if (f.type === 'image') {
-                sheetData.push(["[Signature/Image]"]); 
+                // FIX: Send empty string for images in Excel to avoid "[Signature/Image]" text
+                sheetData.push([""]); 
             } else {
                 sheetData.push([f.value || ""]); 
             }
+            // Add spacing between footer lines if needed
             sheetData.push([""]); 
         });
 
@@ -252,7 +270,7 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         XLSX.writeFile(wb, `${form?.title || "Report"}_${Date.now()}.xlsx`);
     };
 
-    // --- UPDATED PDF EXPORT (Respects DN/Remarks visibility) ---
+    // --- UPDATED PDF EXPORT ---
     const handleExportPDF = () => {
         const doc = new jsPDF('l', 'mm', 'a4');
         
@@ -269,30 +287,23 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         });
         if ((pdfLayout.headers || []).length % 2 !== 0) y += 6;
 
-        // 1. Build PDF Headers dynamically
         const pdfHeaders = [];
         if (showDnColumn) pdfHeaders.push(dnLabel);
         columnOrder.forEach(k => pdfHeaders.push(getLabel(k)));
         if (showRemarksColumn) pdfHeaders.push("Remarks");
 
-        // 2. Build PDF Body dynamically
         const body = entries.map(row => {
             const r = [];
-            
-            if (showDnColumn) {
-                r.push(row[dnKey] || "");
-            }
+            if (showDnColumn) r.push(row[dnKey] || "");
 
             columnOrder.forEach(key => {
                 const conf = allComponents.find(c => c.key === key);
                 let val = (conf?.type === 'calculated') ? calculateCellValue(row, conf) : row[key];
-                r.push(typeof val === 'object' ? JSON.stringify(val) : (val || ""));
+                // USE HELPER here too
+                r.push(formatExportValue(val));
             });
 
-            if (showRemarksColumn) {
-                r.push(row[remarksKey] || "");
-            }
-
+            if (showRemarksColumn) r.push(row[remarksKey] || "");
             return r;
         });
 
@@ -308,27 +319,32 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         let footerY = (doc.lastAutoTable?.finalY || 150) + 20;
         doc.setFontSize(10); doc.setFont("helvetica", "bold");
         
-        (pdfLayout.footers || []).forEach((f, i) => {
-            const x = 14 + (i * 80);
-            if (x < 250) {
-                if (f.type === 'image' && f.value && f.value.startsWith('data:image')) {
-                    try {
-                        doc.addImage(f.value, 'PNG', x, footerY - 15, 40, 15); 
-                        doc.setLineWidth(0.5); 
-                        doc.line(x, footerY + 2, x + 60, footerY + 2);
-                    } catch (err) {
-                        console.error("PDF Image Error", err);
-                        doc.text("(Image Error)", x, footerY);
-                    }
-                } else { 
-                    if (f.value) {
-                        doc.setFont("helvetica", "normal"); 
-                        doc.text(f.value, x, footerY); 
-                        doc.setFont("helvetica", "bold"); 
-                    }
+        // Footer: Line by Line (Vertical)
+        (pdfLayout.footers || []).forEach((f) => {
+            if (footerY > 190) { doc.addPage(); footerY = 20; }
+            const x = 14; 
+            
+            if (f.type === 'image' && f.value && f.value.startsWith('data:image')) {
+                try {
+                    doc.addImage(f.value, 'PNG', x, footerY - 10, 40, 15); 
+                    doc.setLineWidth(0.5); 
+                    // CHANGED: Reduced line length from 60 to 40 to match image width
+                    doc.line(x, footerY + 7, x + 40, footerY + 7);
+                    footerY += 25; 
+                } catch (err) {
+                    console.error("PDF Image Error", err);
+                    footerY += 10;
+                }
+            } else { 
+                if (f.value) {
+                    doc.setFont("helvetica", "normal"); 
+                    doc.text(f.value, x, footerY); 
+                    doc.setFont("helvetica", "bold"); 
+                    footerY += 10;
                 }
             }
         });
+        
         doc.save(`${form?.title || "Report"}_${Date.now()}.pdf`);
     };
 

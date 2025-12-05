@@ -20,7 +20,7 @@ const DynamicTable = ({
     onDeleteRow,
     onExportExcel,
     onExportPDF,
-    onLayoutChange // <--- NEW PROP to sync layout with parent
+    onLayoutChange 
 }) => {
     // --- State ---
     const [draggedColumn, setDraggedColumn] = useState(null);
@@ -67,7 +67,6 @@ const DynamicTable = ({
         setLocalHeaders(newHeaders);
         setDraggedHeader(null);
 
-        // Notify Parent of layout change for PDF sync
         if (onLayoutChange) {
             onLayoutChange({ headers: newHeaders, footers: localFooters });
         }
@@ -87,7 +86,6 @@ const DynamicTable = ({
         setLocalFooters(newFooters);
         setDraggedFooter(null);
 
-        // Notify Parent of layout change for PDF sync
         if (onLayoutChange) {
             onLayoutChange({ headers: localHeaders, footers: newFooters });
         }
@@ -345,19 +343,18 @@ const DynamicTable = ({
                 </div>
             </div>
 
-            {/* --- UPDATED: FOOTER SECTION (Value or Image) --- */}
+            {/* --- UPDATED: FOOTER SECTION (Vertical / Line by Line) --- */}
             {isReportMode && (
-                <div className="mt-5 pt-4 pb-4 px-2 d-flex flex-wrap gap-4">
+                <div className="mt-5 pt-4 pb-4 px-2 d-flex flex-column gap-4"> 
                     {localFooters.map((footer, index) => {
-                        // Check if this footer item is a "Signature/Image" type
                         const isSignature = footer.type === 'image';
                         
                         return (
                             <div 
-                                className="d-inline-block draggable-footer-item" 
+                                className="d-block draggable-footer-item" 
                                 key={footer.id || index} 
                                 style={{ 
-                                    minWidth: '200px',
+                                    width: '100%', 
                                     cursor: 'move',
                                     opacity: draggedFooter === index ? 0.4 : 1,
                                     transition: 'all 0.2s ease',
@@ -371,13 +368,13 @@ const DynamicTable = ({
                                 title="Drag to reorder"
                             >
                                 <div 
-                                    className="w-100 ps-2 pt-1 position-relative" 
+                                    className="ps-2 pt-1 position-relative" 
                                     style={{
                                         userSelect: 'none', 
-                                        // UPDATED: Border (underline) ONLY for Image/Signature type
-                                        borderBottom: isSignature ? '2px solid black' : 'none', 
+                                        borderBottom: isSignature ? '1px solid black' : 'none', 
                                         paddingBottom: '5px', 
-                                        minHeight: '40px'
+                                        minHeight: '40px',
+                                        width: isSignature ? '300px' : 'auto' 
                                     }}
                                 >
                                     {isSignature && footer.value ? (

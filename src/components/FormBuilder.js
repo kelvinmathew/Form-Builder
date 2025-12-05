@@ -431,8 +431,13 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                             {/* Header Section */}
                             <div className="d-flex justify-content-between align-items-center mb-2 border-bottom pb-1">
                                 <h6 className="fw-bold small text-uppercase text-muted mb-0" style={{ fontSize: '13px' }}>Header Details</h6>
-                                <button className="btn btn-xs btn-primary py-0 px-2 rounded-2" style={{ fontSize: '11px' }} onClick={() => addDetailField('headers')}>
-                                    <i className="bi bi-plus me-1"></i>Add
+                                <button
+                                    className="btn btn-xs btn-primary py-0 px-2 rounded-2 d-flex align-items-center"
+                                    style={{ fontSize: '10px' }}
+                                    onClick={() => addDetailField('headers')}
+                                >
+                                    <i className="bi bi-plus me-1 d-flex align-items-center"></i>
+                                    Add
                                 </button>
                             </div>
 
@@ -468,8 +473,13 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                             {/* Footer Section */}
                             <div className="d-flex justify-content-between align-items-center mb-2 border-bottom pb-1 mt-3">
                                 <h6 className="fw-bold small text-uppercase text-muted mb-0" style={{ fontSize: '13px' }}>Footer Details</h6>
-                                <button className="btn btn-xs btn-primary py-0 px-2 rounded-2" style={{ fontSize: '11px' }} onClick={() => addDetailField('footers')}>
-                                    <i className="bi bi-plus me-1"></i>Add
+                                <button
+                                    className="btn btn-xs btn-primary py-0 px-2 rounded-2 d-flex align-items-center"
+                                    style={{ fontSize: '10px' }}
+                                    onClick={() => addDetailField('headers')}
+                                >
+                                    <i className="bi bi-plus me-1 d-flex align-items-center"></i>
+                                    Add
                                 </button>
                             </div>
 
