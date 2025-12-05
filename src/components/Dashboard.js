@@ -1,8 +1,33 @@
-import React from "react";
+import React, { useState } from "react";
 
 const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
+  // State to manage the delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedFormId, setSelectedFormId] = useState(null);
+
+  // Function to trigger the modal opening
+  const handleDeleteClick = (id) => {
+    setSelectedFormId(id);
+    setShowDeleteModal(true);
+  };
+
+  // Function to confirm deletion
+  const confirmDelete = () => {
+    if (selectedFormId) {
+      onDelete(selectedFormId);
+    }
+    setShowDeleteModal(false);
+    setSelectedFormId(null);
+  };
+
+  // Function to cancel deletion
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setSelectedFormId(null);
+  };
+
   return (
-    <div className="min-vh-100" style={{ backgroundColor: "#F3F4F6", fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-vh-100" style={{ backgroundColor: "#F3F4F6", fontFamily: "'Inter', sans-serif", fontSize: "14px" }}>
 
       {/* --- HEADER SECTION --- */}
       <div className="bg-white border-bottom sticky-top" style={{ zIndex: 100 }}>
@@ -11,27 +36,25 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
 
             {/* Title Area */}
             <div className="col-12 col-md-6">
-              <h4 className="fw-bold text-dark mb-1" style={{ letterSpacing: "-0.5px" }}>Dashboard</h4>
-              <p className="text-muted mb-0">Manage your forms and data collection.</p>
+              <h4 className="fw-bold text-dark mb-2" style={{ letterSpacing: "0.2px", fontSize: "16px" }}>Dashboard</h4>
+              <p className="text-muted mb-0" style={{ fontSize: "14px" }}>Manage your forms and data collection.</p>
             </div>
 
             {/* Actions Area */}
             <div className="col-12 col-md-6 d-flex flex-column flex-md-row justify-content-md-end gap-3">
-
-
               {/* Create Button */}
               <button
-                className="btn d-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold shadow-sm"
+                className="btn d-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold shadow-sm rounded-3"
                 onClick={onCreate}
                 style={{
                   backgroundColor: "#4F46E5",
                   color: "#ffffff",
-                  borderRadius: "10px",
+                  fontSize: "14px",
                   border: "none",
                   transition: "transform 0.1s"
                 }}
               >
-                <i className="bi bi-plus-lg"></i>
+                <i className="bi bi-plus-lg "></i>
                 <span>New Form</span>
               </button>
             </div>
@@ -40,7 +63,7 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
       </div>
 
       {/* --- CONTENT SECTION --- */}
-      <div className=" px-4 px-lg-5 py-5">
+      <div className="container px-4 px-lg-5 py-5">
 
         {/* Empty State */}
         {forms.length === 0 ? (
@@ -49,9 +72,9 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
               style={{ width: "80px", height: "80px", backgroundColor: "#EEF2FF", color: "#4F46E5" }}>
               <i className="bi bi-inbox fs-1"></i>
             </div>
-            <h4 className="fw-bold text-dark">No forms found</h4>
-            <p className="text-muted mb-4">Get started by creating your first form.</p>
-            <button className="btn btn-outline-primary px-4 rounded-pill fw-medium" onClick={onCreate}>
+            <h4 className="fw-bold text-dark" style={{ fontSize: "14px" }}>No forms found</h4>
+            <p className="text-muted mb-4" style={{ fontSize: "14px" }}>Get started by creating your first form.</p>
+            <button className="btn btn-outline-primary px-4 rounded-pill fw-medium" onClick={onCreate} style={{ fontSize: "14px" }}>
               Create Form
             </button>
           </div>
@@ -61,13 +84,13 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
 
             {/* List Meta Header (Subtle) */}
             <div className="d-flex justify-content-between align-items-center px-2 mb-1">
-              <span className="text-uppercase fw-bold text-muted" style={{ fontSize: "0.75rem", letterSpacing: "1px" }}>
+              <span className="text-uppercase fw-bold text-muted" style={{ fontSize: "14px", letterSpacing: "1px" }}>
                 All Forms ({forms.length})
               </span>
-
             </div>
 
-            {forms.map((form) => (
+            {/* UPDATED: Added [...forms].reverse() to show latest at top */}
+            {[...forms].reverse().map((form) => (
               <div
                 key={form.id}
                 onClick={() => onOpen(form.id)}
@@ -104,23 +127,19 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                   {/* 2. Main Content */}
                   <div className="flex-grow-1 overflow-hidden me-3">
                     <div className="d-flex align-items-center mb-1">
-                      <h5 className="fw-bold text-dark mb-0 text-truncate" style={{ fontSize: "1.1rem" }}>
+                      <h5 className="fw-bold text-dark mb-0 text-truncate" style={{ fontSize: "14px" }}>
                         {form.title}
                       </h5>
                       {/* Optional Status Badge */}
                       <span className="badge ms-2 rounded-pill fw-normal"
-                        style={{ backgroundColor: "#ECFDF5", color: "#059669", fontSize: "0.75rem" }}>
+                        style={{ backgroundColor: "#ECFDF5", color: "#059669", fontSize: "14px" }}>
                         Active
                       </span>
                     </div>
-                    <p className="text-muted mb-0 text-truncate" style={{ fontSize: "0.95rem" }}>
+                    <p className="text-muted mb-0 text-truncate" style={{ fontSize: "14px" }}>
                       {form.description || "No description provided for this form."}
                     </p>
-
-
                   </div>
-
-
 
                   {/* 4. Actions (Hover/Right) */}
                   <div className="d-flex align-items-center gap-2" onClick={(e) => e.stopPropagation()}>
@@ -130,15 +149,15 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                       title="Edit"
                       style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#EEF2FF" }}
                     >
-                      <i className="bi bi-pencil-fill" style={{ fontSize: "0.9rem" }}></i>
+                      <i className="bi bi-pencil-fill" style={{ fontSize: "14px" }}></i>
                     </button>
                     <button
                       className="btn btn-light text-danger d-flex align-items-center justify-content-center"
-                      onClick={() => onDelete(form.id)}
+                      onClick={() => handleDeleteClick(form.id)}
                       title="Delete"
                       style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#FEF2F2" }}
                     >
-                      <i className="bi bi-trash-fill" style={{ fontSize: "0.9rem" }}></i>
+                      <i className="bi bi-trash-fill" style={{ fontSize: "14px" }}></i>
                     </button>
                   </div>
 
@@ -148,6 +167,36 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
           </div>
         )}
       </div>
+
+      {/* --- DELETE CONFIRMATION MODAL --- */}
+      {showDeleteModal && (
+        <>
+          <div className="modal-backdrop fade show" style={{ zIndex: 1040 }}></div>
+          <div className="modal fade show d-block" tabIndex="-1" role="dialog" style={{ zIndex: 1050 }}>
+            <div className="modal-dialog modal-dialog-centered" role="document">
+              <div className="modal-content border-0 shadow-lg rounded-4">
+                <div className="modal-header border-bottom-0 pb-0">
+                  <h5 className="modal-title fw-bold text-danger" style={{ fontSize: "14px" }}>Delete Form?</h5>
+                  <button type="button" className="btn-close" onClick={cancelDelete}></button>
+                </div>
+                <div className="modal-body py-4">
+                  <p className="text-muted mb-0" style={{ fontSize: "14px" }}>
+                    Are you sure you want to delete this form? This action cannot be undone.
+                  </p>
+                </div>
+                <div className="modal-footer border-top-0 pt-0">
+                  <button type="button" className="btn btn-light rounded-pill px-4" onClick={cancelDelete} style={{ fontSize: "14px" }}>
+                    Cancel
+                  </button>
+                  <button type="button" className="btn btn-danger rounded-pill px-4" onClick={confirmDelete} style={{ fontSize: "14px" }}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

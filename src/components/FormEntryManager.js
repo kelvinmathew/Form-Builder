@@ -1,741 +1,474 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import Cookies from 'js-cookie';
 
-// --- HELPER: Recursively get all input components ---
-const flattenComponents = (components, inputs = []) => {
-    if (!components) return inputs;
+// --- FIXED IMPORTS ---
+import AddCalculatedColumnModal from './AddCalculatedColumnModal';
+import CustomFormRenderer from './CustomFormRenderer';
+import DataEntryList from './DataEntryList';
+import DynamicTable from './DynamicTable';
+import { flattenComponents, calculateCellValue } from '../utils/formHelpers';
 
-    components.forEach((component) => {
-        if (component.columns) {
-            component.columns.forEach((col) => flattenComponents(col.components, inputs));
-        } else if (component.components) {
-            flattenComponents(component.components, inputs);
-        }
-        if (component.input && component.type !== "button" && component.key && component.type !== 'htmlelement') {
-            inputs.push(component);
-        }
+const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBack }) => {
+    // --- 1. STATE ---
+    const [userName, setUserName] = useState("");
+    const [isUserSet, setIsUserSet] = useState(false);
+    const [tempName, setTempName] = useState(""); 
+
+    // MODES: "LIST" (Main View), "ALL_DATA" (Table View), "ADD", "EDIT"
+    const [mode, setMode] = useState("LIST");
+    
+    const [editingEntry, setEditingEntry] = useState(null);
+    const [showCalcModal, setShowCalcModal] = useState(false);
+    
+    const [columnOrder, setColumnOrder] = useState([]);
+    
+    // Initialize customColumns from localStorage if available
+    const [customColumns, setCustomColumns] = useState(() => {
+        if (!form?.id) return [];
+        const savedCols = localStorage.getItem(`custom_columns_${form.id}`);
+        return savedCols ? JSON.parse(savedCols) : [];
     });
 
-    return inputs;
-};
-
-// --- CUSTOM FORM RENDERER COMPONENT ---
-const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
-    const [formData, setFormData] = useState(initialData || {});
-    const [errors, setErrors] = useState({});
-
-    const allComponents = useMemo(() => {
-        return schema?.components ? flattenComponents(schema.components) : [];
-    }, [schema]);
-
-    useEffect(() => {
-        if (onFormReady) {
-            onFormReady({
-                submit: () => {
-                    return new Promise((resolve, reject) => {
-                        const validationErrors = {};
-
-                        allComponents.forEach((comp) => {
-                            if (comp.validate?.required && !formData[comp.key]) {
-                                validationErrors[comp.key] = `${comp.label} is required`;
-                            }
-                        });
-
-                        if (Object.keys(validationErrors).length > 0) {
-                            setErrors(validationErrors);
-                            reject(validationErrors);
-                        } else {
-                            setErrors({});
-                            resolve({ data: formData });
-                        }
-                    });
-                },
-                getData: () => formData,
-            });
-        }
-    }, [formData, allComponents, onFormReady]);
-
-    useEffect(() => {
-        setFormData(initialData || {});
-    }, [initialData]);
-
-    const handleChange = (key, value) => {
-        setFormData((prev) => ({ ...prev, [key]: value }));
-        if (errors[key]) {
-            setErrors((prev) => {
-                const newErrors = { ...prev };
-                delete newErrors[key];
-                return newErrors;
-            });
-        }
-    };
-
-    const renderField = (component) => {
-        const { key, label, type, placeholder, validate, values, data } = component;
-        const value = formData[key] !== undefined ? formData[key] : "";
-        const error = errors[key];
-        const isRequired = validate?.required;
-
-        const labelElement = (
-            <label className="form-label fw-medium mb-1">
-                {label}
-                {isRequired && <span className="text-danger ms-1">*</span>}
-            </label>
-        );
-
-        const errorElement = error && (
-            <div className="text-danger small mt-1">
-                <i className="bi bi-exclamation-circle me-1"></i>
-                {error}
-            </div>
-        );
-
-        const inputClass = `form-control ${error ? "is-invalid" : ""}`;
-
-        switch (type) {
-            case "textfield":
-            case "text":
-                return (
-                    <div className="mb-3" key={key}>
-                        {labelElement}
-                        <input
-                            type="text"
-                            className={inputClass}
-                            placeholder={placeholder}
-                            value={value}
-                            onChange={(e) => handleChange(key, e.target.value)}
-                        />
-                        {errorElement}
-                    </div>
-                );
-
-            case "number":
-                return (
-                    <div className="mb-3" key={key}>
-                        {labelElement}
-                        <input
-                            type="number"
-                            className={inputClass}
-                            placeholder={placeholder}
-                            value={value}
-                            onChange={(e) => handleChange(key, e.target.value)}
-                        />
-                        {errorElement}
-                    </div>
-                );
-
-            case "email":
-                return (
-                    <div className="mb-3" key={key}>
-                        {labelElement}
-                        <input
-                            type="email"
-                            className={inputClass}
-                            placeholder={placeholder}
-                            value={value}
-                            onChange={(e) => handleChange(key, e.target.value)}
-                        />
-                        {errorElement}
-                    </div>
-                );
-
-            case "textarea":
-                return (
-                    <div className="mb-3" key={key}>
-                        {labelElement}
-                        <textarea
-                            className={inputClass}
-                            placeholder={placeholder}
-                            rows={4}
-                            value={value}
-                            onChange={(e) => handleChange(key, e.target.value)}
-                        />
-                        {errorElement}
-                    </div>
-                );
-
-            case "select":
-                const selectOptions = data?.values || values || [];
-                return (
-                    <div className="mb-3" key={key}>
-                        {labelElement}
-                        <select
-                            className={`form-select ${error ? "is-invalid" : ""}`}
-                            value={value}
-                            onChange={(e) => handleChange(key, e.target.value)}
-                        >
-                            <option value="">{placeholder || "Select..."}</option>
-                            {selectOptions.map((opt, idx) => (
-                                <option key={idx} value={opt.value || opt}>
-                                    {opt.label || opt}
-                                </option>
-                            ))}
-                        </select>
-                        {errorElement}
-                    </div>
-                );
-
-            case "checkbox":
-                return (
-                    <div className="mb-3" key={key}>
-                        <div className="form-check">
-                            <input
-                                type="checkbox"
-                                className={`form-check-input ${error ? "is-invalid" : ""}`}
-                                checked={!!value}
-                                onChange={(e) => handleChange(key, e.target.checked)}
-                                id={key}
-                            />
-                            <label className="form-check-label" htmlFor={key}>
-                                {label}
-                                {isRequired && <span className="text-danger ms-1">*</span>}
-                            </label>
-                        </div>
-                        {errorElement}
-                    </div>
-                );
-
-            case "radio":
-                const radioOptions = values || [];
-                return (
-                    <div className="mb-3" key={key}>
-                        {labelElement}
-                        {radioOptions.map((opt, idx) => (
-                            <div className="form-check" key={idx}>
-                                <input
-                                    type="radio"
-                                    className={`form-check-input ${error ? "is-invalid" : ""}`}
-                                    name={key}
-                                    value={opt.value || opt}
-                                    checked={value === (opt.value || opt)}
-                                    onChange={(e) => handleChange(key, e.target.value)}
-                                    id={`${key}_${idx}`}
-                                />
-                                <label className="form-check-label" htmlFor={`${key}_${idx}`}>
-                                    {opt.label || opt}
-                                </label>
-                            </div>
-                        ))}
-                        {errorElement}
-                    </div>
-                );
-
-            case "datetime":
-            case "date":
-                return (
-                    <div className="mb-3" key={key}>
-                        {labelElement}
-                        <input
-                            type="date"
-                            className={inputClass}
-                            value={value}
-                            onChange={(e) => handleChange(key, e.target.value)}
-                        />
-                        {errorElement}
-                    </div>
-                );
-
-            case "time":
-                return (
-                    <div className="mb-3" key={key}>
-                        {labelElement}
-                        <input
-                            type="time"
-                            className={inputClass}
-                            value={value}
-                            onChange={(e) => handleChange(key, e.target.value)}
-                        />
-                        {errorElement}
-                    </div>
-                );
-
-            case "file":
-                return (
-                    <div className="mb-3" key={key}>
-                        {labelElement}
-                        <input
-                            type="file"
-                            className={inputClass}
-                            onChange={(e) => {
-                                const file = e.target.files[0];
-                                if (file) {
-                                    handleChange(key, file.name);
-                                }
-                            }}
-                        />
-                        {value && typeof value === 'string' && (
-                            <small className="text-muted d-block mt-1">
-                                Selected: {value}
-                            </small>
-                        )}
-                        {errorElement}
-                    </div>
-                );
-
-            default:
-                return (
-                    <div className="mb-3" key={key}>
-                        {labelElement}
-                        <input
-                            type="text"
-                            className={inputClass}
-                            placeholder={placeholder}
-                            value={value}
-                            onChange={(e) => handleChange(key, e.target.value)}
-                        />
-                        {errorElement}
-                    </div>
-                );
-        }
-    };
-
-    return (
-        <div className="custom-form-renderer">
-            {allComponents.map((component) => renderField(component))}
-        </div>
-    );
-};
-
-// --- MAIN COMPONENT ---
-const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBack }) => {
-    const [mode, setMode] = useState("GROUPS");
-    const [selectedDn, setSelectedDn] = useState(null);
-    const [editingEntry, setEditingEntry] = useState(null);
-    const formInstanceRef = useRef(null);
     const [formKey, setFormKey] = useState(0);
-    const [columnOrder, setColumnOrder] = useState([]);
-    const [draggedColumn, setDraggedColumn] = useState(null);
+    const formInstanceRef = useRef(null);
 
-    const allComponents = useMemo(() => {
-        return form?.schema?.components ? flattenComponents(form.schema.components) : [];
+    // --- STATE for Layout (Syncs with DynamicTable) ---
+    const [pdfLayout, setPdfLayout] = useState({ 
+        headers: form?.projectDetails?.headers || [], 
+        footers: form?.projectDetails?.footers || [] 
+    });
+
+    // --- 2. INITIALIZATION EFFECTS ---
+    useEffect(() => {
+        const savedName = Cookies.get('formUser');
+        if (savedName) {
+            setUserName(savedName);
+            setIsUserSet(true);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (form?.id) {
+            localStorage.setItem(`custom_columns_${form.id}`, JSON.stringify(customColumns));
+        }
+    }, [customColumns, form?.id]);
+
+    useEffect(() => {
+        if (form?.projectDetails) {
+            setPdfLayout({
+                headers: form.projectDetails.headers || [],
+                footers: form.projectDetails.footers || []
+            });
+        }
     }, [form]);
+
+    const projectDetails = form?.projectDetails || { headers: [], footers: [] };
+    
+    const allComponents = useMemo(() => {
+        if (!form?.schema?.components) return [];
+        const original = flattenComponents(form.schema.components);
+        return [...original, ...customColumns];
+    }, [form, customColumns]);
 
     const dnComponent = allComponents.find(c => ["delivery note", "dn no.", "dn no", "dn number"].includes(c.label?.trim().toLowerCase()));
     const dnKey = dnComponent ? dnComponent.key : "dnNumber";
     const dnLabel = dnComponent ? dnComponent.label : "DN No.";
-
     const remarksComponent = allComponents.find(c => c.label?.trim().toLowerCase() === "remarks");
     const remarksKey = remarksComponent ? remarksComponent.key : "remarks";
 
+    // --- LOGIC TO MATCH TABLE VISIBILITY ---
+    const showDnColumn = allComponents.some(c => c.key === dnKey);
+    const showRemarksColumn = allComponents.some(c => c.key === remarksKey);
+
     useEffect(() => {
         if (allComponents.length > 0) {
-            const schemaKeys = allComponents
-                .filter(c => c.key !== dnKey && c.key !== remarksKey)
-                .map(c => c.key);
-
-            setColumnOrder(prevOrder => {
-                const cleanedOrder = prevOrder.filter(key => schemaKeys.includes(key));
-                const newKeys = schemaKeys.filter(key => !cleanedOrder.includes(key));
-                return [...cleanedOrder, ...newKeys];
+            const schemaKeys = allComponents.filter(c => c.key !== dnKey && c.key !== remarksKey).map(c => c.key);
+            
+            setColumnOrder(prev => {
+                const existingBase = prev.filter(key => schemaKeys.includes(key) || key === 'createdBy' || key === 'createdAt');
+                const newKeys = schemaKeys.filter(key => !existingBase.includes(key));
+                let combined = [...existingBase, ...newKeys];
+                if (!combined.includes('createdBy')) combined.push('createdBy');
+                if (!combined.includes('createdAt')) combined.push('createdAt');
+                return combined;
             });
         }
     }, [allComponents, dnKey, remarksKey]);
 
-    const handleColumnDrop = (targetKey) => {
-        if (!draggedColumn || draggedColumn === targetKey) return;
-        const newOrder = [...columnOrder];
-        const draggedIdx = newOrder.indexOf(draggedColumn);
-        const targetIdx = newOrder.indexOf(targetKey);
-        newOrder.splice(draggedIdx, 1);
-        newOrder.splice(targetIdx, 0, draggedColumn);
-        setColumnOrder(newOrder);
-        setDraggedColumn(null);
+    const listColumnOrder = useMemo(() => {
+        const customKeys = customColumns.map(col => col.key);
+        return columnOrder.filter(key => !customKeys.includes(key));
+    }, [columnOrder, customColumns]);
+
+
+    // --- 3. HANDLERS ---
+    const handleUserSubmit = (e) => {
+        e.preventDefault();
+        if (!tempName.trim()) return alert("Please enter your name");
+        Cookies.set('formUser', tempName.trim(), { expires: 7 }); 
+        setUserName(tempName.trim());
+        setIsUserSet(true);
     };
 
-    const groupedData = useMemo(() => {
-        if (!entries) return {};
-        const groups = {};
-        entries.forEach((entry) => {
-            const dnValue = entry[dnKey] || "Unknown";
-            if (!groups[dnValue]) groups[dnValue] = [];
-            groups[dnValue].push(entry);
-        });
-        return groups;
-    }, [entries, dnKey]);
-
-    const dnKeys = Object.keys(groupedData);
-
-    const handleNavigationBack = () => {
-        if (mode === "GROUPS") {
-            if (onBack) onBack();
-        } else if (mode === "ADD_FORM" || mode === "EDIT_FORM") {
-            selectedDn ? setMode("DN_ENTRIES") : setMode("GROUPS");
-            setEditingEntry(null);
-        } else if (mode === "DN_ENTRIES" || mode === "DN_TABLE") {
-            setMode("GROUPS");
-        } else {
-            setMode("GROUPS");
+    const handleEditName = () => {
+        const newName = prompt("Edit your name:", userName);
+        if (newName !== null && newName.trim() !== "") {
+            const trimmedName = newName.trim();
+            setUserName(trimmedName);
+            Cookies.set('formUser', trimmedName, { expires: 7 });
         }
     };
 
-    const handleStartAdd = () => {
-        setEditingEntry(null);
-        setFormKey(prev => prev + 1);
-        setMode("ADD_FORM");
+    const handleNavigationBack = () => {
+        if (mode === "LIST") {
+            onBack?.();
+        } else {
+            setMode("LIST"); 
+            setEditingEntry(null);
+        }
     };
-
-    const handleDnClick = (dn) => {
-        setSelectedDn(dn);
-        setMode("DN_ENTRIES");
-    };
-
-    const handleEditClick = (entry) => {
-        setEditingEntry({ ...entry });
-        setFormKey(prev => prev + 1);
-        setMode("EDIT_FORM");
-    };
-
-    const handleFormReady = useCallback((instance) => {
-        formInstanceRef.current = instance;
-    }, []);
 
     const handleCustomSubmit = (actionType) => {
         if (!formInstanceRef.current) return;
-
         formInstanceRef.current.submit().then((submission) => {
-            const submittedDn = submission.data[dnKey];
-            if (!submittedDn) return alert(`${dnLabel} is required!`);
-
             const timestamp = new Date().toISOString();
+            const displayDate = new Date().toLocaleString(); 
 
-            if (mode === "EDIT_FORM" && editingEntry) {
-                const updatedEntry = {
-                    ...editingEntry,
-                    ...submission.data,
-                    updatedAt: timestamp
-                };
-                updatedEntry._rowId = editingEntry._rowId;
-
-                if (onUpdate) {
-                    onUpdate(updatedEntry);
-                } else {
-                    alert("Error: onUpdate prop is missing.");
-                    return;
-                }
-
-                setSelectedDn(submittedDn);
-                setEditingEntry(null);
-                setMode("DN_ENTRIES");
+            if (mode === "EDIT" && editingEntry) {
+                onUpdate({ 
+                    ...editingEntry, 
+                    ...submission.data, 
+                    updatedAt: timestamp 
+                });
+                setEditingEntry(null); 
+                setMode("LIST"); 
             } else {
-                const newEntry = {
-                    ...submission.data,
-                    createdAt: timestamp,
-                    updatedAt: timestamp,
-                    _rowId: Date.now().toString()
-                };
-                onSubmit(newEntry);
-
-                if (actionType === 'SAVE_AND_CONTINUE') {
-                    setFormKey(prev => prev + 1);
-                    setSelectedDn(submittedDn);
-                } else {
-                    setSelectedDn(submittedDn);
-                    setMode("DN_ENTRIES");
+                onSubmit({ 
+                    ...submission.data, 
+                    createdAt: displayDate, 
+                    createdBy: userName,     
+                    updatedAt: timestamp, 
+                    _rowId: Date.now().toString() 
+                });
+                
+                if (actionType === 'SAVE_AND_CONTINUE') { 
+                    setFormKey(p => p + 1); 
+                }
+                else { 
+                    setMode("LIST"); 
                 }
             }
-        }).catch((error) => console.log("Validation failed", error));
+        }).catch((err) => console.log("Validation failed", err));
     };
 
-    const getInitialFormData = () => {
-        if (mode === "EDIT_FORM" && editingEntry) {
-            return editingEntry;
+    const handleCellUpdate = (rowId, key, newValue) => {
+        const entry = entries.find(e => e._rowId === rowId);
+        if (entry) onUpdate({ ...entry, [key]: newValue });
+    };
+
+    const handleColumnDrop = (draggedCol, targetCol) => {
+        if (!draggedCol || draggedCol === targetCol) return;
+        const newOrder = [...columnOrder];
+        
+        // Calculate indices BEFORE modifying the array
+        const fromIndex = newOrder.indexOf(draggedCol);
+        const toIndex = newOrder.indexOf(targetCol);
+
+        // Remove & Insert
+        newOrder.splice(fromIndex, 1);
+        newOrder.splice(toIndex, 0, draggedCol);
+
+        setColumnOrder(newOrder);
+    };
+
+    // --- 4. EXPORTS ---
+    const getLabel = (key) => {
+        if (key === 'createdBy') return 'Created By';
+        if (key === 'createdAt') return 'Created Date';
+        const comp = allComponents.find(c => c.key === key);
+        return comp ? comp.label : key;
+    };
+
+    // --- UPDATED EXCEL EXPORT (Respects DN/Remarks visibility) ---
+    const handleExportExcel = () => {
+        const sheetData = [];
+        sheetData.push([form.title || "Form Report", ""]);
+        
+        const headers = pdfLayout.headers || [];
+        for (let i = 0; i < headers.length; i += 2) {
+            const r = [];
+            if (headers[i]) { r.push(headers[i].label); r.push(headers[i].value); }
+            if (headers[i+1]) { r.push(""); r.push(headers[i+1].label); r.push(headers[i+1].value); }
+            sheetData.push(r);
         }
-        if (selectedDn) {
-            return { [dnKey]: selectedDn };
-        }
-        return {};
-    };
+        sheetData.push([""]); 
 
-    if (!form) return <div className="p-5 text-center text-muted">Loading configuration...</div>;
+        // 1. Build Header Row dynamically
+        const tableHeader = [];
+        if (showDnColumn) tableHeader.push(dnLabel);
+        columnOrder.forEach(k => tableHeader.push(getLabel(k)));
+        if (showRemarksColumn) tableHeader.push("Remarks");
+        
+        sheetData.push(tableHeader);
 
-    const renderEntryList = (data) => {
-        const previewKeys = columnOrder.slice(0, 4);
-        return (
-            <div className="d-flex flex-column gap-3">
-                {data.map((row, idx) => (
-                    <div
-                        key={row._rowId || idx}
-                        className="card border-0 shadow-sm w-100 cursor-pointer entry-card"
-                        onClick={() => handleEditClick(row)}
-                        style={{ borderRadius: "8px", transition: "transform 0.1s, box-shadow 0.2s" }}
-                        onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.005)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 .125rem .25rem rgba(0,0,0,.075)"; }}
-                    >
-                        <div className="card-body p-3">
-                            <div className="row align-items-center">
-                                <div className="col-12 col-md-3 border-end-md mb-2 mb-md-0">
-                                    <div className="d-flex align-items-center gap-2 mb-1">
-                                        <span className="badge bg-light text-primary border">Entry #{idx + 1}</span>
-                                        <span className={`badge ${row.createdAt === row.updatedAt ? "bg-warning text-dark" : "bg-success"}`}>
-                                            {row.createdAt === row.updatedAt ? "Pending" : "Completed"}
-                                        </span>
-                                    </div>
-                                    <small className="text-muted d-block text-truncate">
-                                        Updated: {row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'New'}
-                                    </small>
-                                </div>
-                                <div className="col-12 col-md-7 mb-2 mb-md-0">
-                                    <div className="row g-2">
-                                        {previewKeys.map(key => {
-                                            const comp = allComponents.find(c => c.key === key);
-                                            return (
-                                                <div key={key} className="col-6 col-lg-3">
-                                                    <small className="text-muted d-block" style={{ fontSize: "0.7rem" }}>{comp?.label}</small>
-                                                    <span className="fw-medium text-dark text-truncate d-block" style={{ fontSize: "0.85rem" }}>
-                                                        {row[key] ? row[key] : <span className="text-light-gray">-</span>}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                                <div className="col-12 col-md-2 text-md-end text-start">
-                                    <div className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-medium">
-                                        Edit <i className="bi bi-arrow-right ms-1"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-                {data.length === 0 && <div className="text-center p-5 text-muted">No entries yet.</div>}
-            </div>
-        );
-    };
+        // 2. Build Data Rows dynamically
+        entries.forEach(row => {
+            const rData = [];
+            
+            if (showDnColumn) {
+                rData.push(row[dnKey] || "");
+            }
 
-    const renderTable = (data, title, isReportMode = false) => {
-        const themeColor = "#00B050";
-        const getHeaderStyle = (isDragging = false) => ({
-            backgroundColor: isReportMode ? themeColor : (isDragging ? "#e9ecef" : "#F9FAFB"),
-            color: isReportMode ? "white" : "#545757",
-            fontSize: "0.75rem",
-            border: isReportMode ? "1px solid white" : "1px solid #dee2e6",
-            cursor: isReportMode ? "default" : "move",
-            userSelect: "none"
+            columnOrder.forEach(key => {
+                const conf = allComponents.find(c => c.key === key);
+                let val = (conf?.type === 'calculated') ? calculateCellValue(row, conf) : row[key];
+                rData.push(typeof val === 'object' ? JSON.stringify(val) : (val || ""));
+            });
+
+            if (showRemarksColumn) {
+                rData.push(row[remarksKey] || "");
+            }
+
+            sheetData.push(rData);
         });
 
+        sheetData.push(["", ""]);
+        
+        (pdfLayout.footers || []).forEach(f => { 
+            if (f.type === 'image') {
+                sheetData.push(["[Signature/Image]"]); 
+            } else {
+                sheetData.push([f.value || ""]); 
+            }
+            sheetData.push([""]); 
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(sheetData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Report");
+        XLSX.writeFile(wb, `${form?.title || "Report"}_${Date.now()}.xlsx`);
+    };
+
+    // --- UPDATED PDF EXPORT (Respects DN/Remarks visibility) ---
+    const handleExportPDF = () => {
+        const doc = new jsPDF('l', 'mm', 'a4');
+        
+        doc.setFontSize(16); 
+        doc.text(form.title || "Report", 14, 15);
+        
+        doc.setFontSize(10); doc.setFillColor(0, 176, 80); doc.rect(14, 20, 269, 7, 'F');
+        doc.setTextColor(255, 255, 255); doc.text("Project Details", 16, 25); doc.setTextColor(0, 0, 0);
+        
+        let y = 35;
+        (pdfLayout.headers || []).forEach((h, i) => {
+            doc.text(`${h.label}: ${h.value || ""}`, (i % 2 === 0 ? 14 : 150), y);
+            if (i % 2 !== 0) y += 6;
+        });
+        if ((pdfLayout.headers || []).length % 2 !== 0) y += 6;
+
+        // 1. Build PDF Headers dynamically
+        const pdfHeaders = [];
+        if (showDnColumn) pdfHeaders.push(dnLabel);
+        columnOrder.forEach(k => pdfHeaders.push(getLabel(k)));
+        if (showRemarksColumn) pdfHeaders.push("Remarks");
+
+        // 2. Build PDF Body dynamically
+        const body = entries.map(row => {
+            const r = [];
+            
+            if (showDnColumn) {
+                r.push(row[dnKey] || "");
+            }
+
+            columnOrder.forEach(key => {
+                const conf = allComponents.find(c => c.key === key);
+                let val = (conf?.type === 'calculated') ? calculateCellValue(row, conf) : row[key];
+                r.push(typeof val === 'object' ? JSON.stringify(val) : (val || ""));
+            });
+
+            if (showRemarksColumn) {
+                r.push(row[remarksKey] || "");
+            }
+
+            return r;
+        });
+
+        autoTable(doc, { 
+            startY: y + 10, 
+            head: [pdfHeaders], 
+            body: body, 
+            headStyles: { fillColor: [0, 176, 80] }, 
+            styles: { fontSize: 8 }, 
+            theme: 'grid' 
+        });
+        
+        let footerY = (doc.lastAutoTable?.finalY || 150) + 20;
+        doc.setFontSize(10); doc.setFont("helvetica", "bold");
+        
+        (pdfLayout.footers || []).forEach((f, i) => {
+            const x = 14 + (i * 80);
+            if (x < 250) {
+                if (f.type === 'image' && f.value && f.value.startsWith('data:image')) {
+                    try {
+                        doc.addImage(f.value, 'PNG', x, footerY - 15, 40, 15); 
+                        doc.setLineWidth(0.5); 
+                        doc.line(x, footerY + 2, x + 60, footerY + 2);
+                    } catch (err) {
+                        console.error("PDF Image Error", err);
+                        doc.text("(Image Error)", x, footerY);
+                    }
+                } else { 
+                    if (f.value) {
+                        doc.setFont("helvetica", "normal"); 
+                        doc.text(f.value, x, footerY); 
+                        doc.setFont("helvetica", "bold"); 
+                    }
+                }
+            }
+        });
+        doc.save(`${form?.title || "Report"}_${Date.now()}.pdf`);
+    };
+
+    const handleFormReady = useCallback((inst) => { 
+        formInstanceRef.current = inst; 
+    }, []);
+
+    const activeSchema = useMemo(() => {
+        if (!form?.schema) return null;
+        return { 
+            ...form.schema, 
+            components: [...(form.schema.components || []), ...customColumns] 
+        };
+    }, [form, customColumns]);
+
+
+    // --- 5. RENDER ---
+    if (!form) return <div className="p-5 text-center text-muted">Loading configuration...</div>;
+
+    if (!isUserSet) {
         return (
-            <div className={`bg-white ${!isReportMode ? "card border-0 shadow-sm rounded-4 overflow-hidden" : ""}`}>
-                {isReportMode && (
-                    <div className="mb-4">
-                        <div className="text-center mb-4 pt-2">
-                            <h4 className="fw-bold text-dark">Fresh Concrete - Site Sampling Report</h4>
+            <div className="d-flex align-items-center justify-content-center min-vh-100" style={{backgroundColor: "#F3F4F6"}}>
+                <div className="card border-0 shadow-sm p-4" style={{width: "100%", maxWidth: "500px", borderRadius: "8px"}}>
+                    <h3 className="fw-bold mb-1" style={{color: "#2c3e50"}}>Welcome</h3>
+                    <p className="text-muted mb-4">Please enter your name to continue</p>
+                    <form onSubmit={handleUserSubmit}>
+                        <div className="mb-4">
+                            <label className="form-label fw-bold small text-uppercase text-muted">Your Name *</label>
+                            <input 
+                                type="text" 
+                                className="form-control form-control-lg"
+                                placeholder="Enter your name"
+                                value={tempName}
+                                onChange={(e) => setTempName(e.target.value)}
+                                autoFocus
+                            />
                         </div>
-                        <div className="text-white fw-bold py-1 px-3 mb-3" style={{ backgroundColor: themeColor }}>
-                            Project Details
-                        </div>
-                        <div className="row mb-4 px-2" style={{ fontSize: "0.9rem", fontWeight: "600" }}>
-                            <div className="col-md-8">
-                                {["Station", "Customer", "Project", "Mix Code"].map(label => (
-                                    <div className="row mb-2 align-items-end" key={label}>
-                                        <div className="col-3 text-muted">{label}:</div>
-                                        <div className="col-9 border-bottom" style={{ minHeight: "24px", borderColor: "#dee2e6" }}></div>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="col-md-4">
-                                {["Date", "Req. Slump"].map(label => (
-                                    <div className="row mb-2 align-items-end" key={label}>
-                                        <div className="col-4 text-muted">{label}:</div>
-                                        <div className="col-8 border-bottom" style={{ minHeight: "24px", borderColor: "#dee2e6" }}></div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <h6 className="fw-bold px-1 mb-2">{form.title}</h6>
-                    </div>
-                )}
-
-                {!isReportMode && (
-                    <div className="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
-                        <h5 className="fw-bold mb-0">{title}</h5>
-                        <small className="text-muted text-end">
-                            Drag headers to move columns.<br />Changes apply to "All Data".
-                        </small>
-                    </div>
-                )}
-
-                <div className={isReportMode ? "" : "table-responsive"}>
-                    <table className={`table table-bordered align-middle mb-0 ${isReportMode ? "table-sm w-100" : ""}`}>
-                        <thead>
-                            <tr>
-                                <th className="py-3 px-2 text-center" style={{ ...getHeaderStyle(), cursor: 'default' }}>{dnLabel}</th>
-                                {columnOrder.map((key) => {
-                                    const comp = allComponents.find(c => c.key === key);
-                                    return (
-                                        <th
-                                            key={key}
-                                            className="py-2 px-1 text-center"
-                                            draggable={!isReportMode}
-                                            onDragStart={() => setDraggedColumn(key)}
-                                            onDragOver={(e) => e.preventDefault()}
-                                            onDrop={() => handleColumnDrop(key)}
-                                            style={getHeaderStyle(draggedColumn === key)}
-                                        >
-                                            {comp?.label || key}
-                                            {!isReportMode && <i className="bi bi-grip-vertical text-muted ms-1 opacity-50"></i>}
-                                        </th>
-                                    );
-                                })}
-                                <th className="py-2 px-1 text-center" style={{ ...getHeaderStyle(), cursor: 'default' }}>Remarks</th>
-                                {!isReportMode && <th className="text-center" style={{ ...getHeaderStyle(), cursor: 'default', width: "80px" }}>Actions</th>}
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white">
-                            {data.map((row, idx) => (
-                                <tr key={row._rowId || idx}>
-                                    <td className="px-3 py-3 text-center small fw-bold">{row[dnKey]}</td>
-                                    {columnOrder.map(key => (
-                                        <td key={key} className="px-3 py-3 text-center small">
-                                            {typeof row[key] === 'object' ? JSON.stringify(row[key]) : (row[key] || "-")}
-                                        </td>
-                                    ))}
-                                    <td className="px-3 py-3 text-center small">{row[remarksKey] || ""}</td>
-                                    {!isReportMode && (
-                                        <td className="text-center">
-                                            <button className="btn btn-sm text-danger" onClick={() => onDeleteRow(row._rowId)}>
-                                                <i className="bi bi-trash3-fill"></i>
-                                            </button>
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                        <button type="submit" className="btn btn-primary btn-lg w-100">Continue to Form</button>
+                    </form>
                 </div>
-
-                {isReportMode && (
-                    <div className="mt-5 pt-4 pb-4 px-2">
-                        <div className="d-inline-block">
-                            <div className="border-top border-dark border-2" style={{ width: "200px" }}></div>
-                            <small className="fw-bold">Signature</small>
-                        </div>
-                    </div>
-                )}
             </div>
         );
-    };
+    }
 
     return (
         <div className="min-vh-100" style={{ backgroundColor: "#F3F4F6", fontFamily: "'Inter', sans-serif" }}>
-            <div className="bg-white border-bottom sticky-top py-3 shadow-sm" style={{ zIndex: 100 }}>
+            <AddCalculatedColumnModal show={showCalcModal} onClose={() => setShowCalcModal(false)} onSave={(newCol) => { setCustomColumns(p => [...p, newCol]); setShowCalcModal(false); }} existingColumns={allComponents.filter(c => c.key !== dnKey && c.key !== remarksKey)} />
+
+            <div className="bg-white border-bottom sticky-top py-3 shadow-sm" style={{ zIndex: 90 }}>
                 <div className="container px-4">
                     <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
                         <div className="d-flex align-items-center gap-3">
-                            <button onClick={handleNavigationBack} className="btn btn-light border" style={{ borderRadius: "10px" }}>
-                                <i className="bi bi-arrow-left"></i>
-                            </button>
+                            <button onClick={handleNavigationBack} className="btn btn-light border" style={{ borderRadius: "10px" }}><i className="bi bi-arrow-left"></i></button>
                             <div>
                                 <h5 className="fw-bold mb-0 text-dark">{form.title}</h5>
-                                <small className="text-muted" style={{ fontSize: "0.85rem" }}>
-                                    {mode === "GROUPS" && "Data Groups"}
-                                    {mode === "DN_ENTRIES" && `Managing: ${selectedDn}`}
-                                    {(mode === "ADD_FORM" || mode === "EDIT_FORM") && "Entry Form"}
-                                    {mode === "PROJECT_SHEET" && "All Records"}
-                                </small>
+                                <div className="d-flex align-items-center gap-2">
+                                    <small className=" fw-bold text-black" style={{ fontSize: "13.5px" }}>{mode === "LIST" ? "Entries List" : mode === "ALL_DATA" ? "All Records" : "Entry Form"}</small>
+                                    <span className="text-muted">•</span>
+                                    <small 
+                                        className="text-success cursor-pointer fw-bold" 
+                                        onClick={handleEditName}
+                                        title="Click to edit name"
+                                        style={{cursor: "pointer"}}
+                                    >
+                                        <i className="bi bi-person-circle me-1"></i>{userName} <i className="bi bi-pencil-fill ms-1" style={{fontSize: "0.7rem", opacity: 0.7}}></i>
+                                    </small>
+                                </div>
                             </div>
                         </div>
                         <div className="d-flex p-1 rounded-3 bg-light border">
-                            <button
-                                className={`btn btn-sm px-3 rounded-3 border-0 ${mode === "GROUPS" || mode.includes("DN") || mode.includes("FORM") ? "bg-white shadow-sm text-primary fw-bold" : "text-muted"}`}
-                                onClick={() => setMode("GROUPS")}
-                            >
-                                <i className="bi bi-folder2 me-2"></i> Groups
-                            </button>
-                            <button
-                                className={`btn btn-sm px-3 rounded-3 border-0 ${mode === "PROJECT_SHEET" ? "bg-white shadow-sm text-success fw-bold" : "text-muted"}`}
-                                onClick={() => setMode("PROJECT_SHEET")}
-                            >
-                                <i className="bi bi-table me-2"></i> All Data
-                            </button>
+                            <button className={`btn btn-sm px-3 rounded-3 border-0 ${mode === "LIST" || mode === "ADD" || mode === "EDIT" ? "bg-white shadow-sm text-primary fw-bold" : "text-muted"}`} onClick={() => setMode("LIST")}><i className="bi bi-list-ul me-2"></i> Entries</button>
+                            <button className={`btn btn-sm px-3 rounded-3 border-0 ${mode === "ALL_DATA" ? "bg-white shadow-sm text-success fw-bold" : "text-muted"}`} onClick={() => setMode("ALL_DATA")}><i className="bi bi-table me-2"></i> All Data</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div className="container px-4 py-4">
-                {mode === "GROUPS" && (
-                    <div className="animate-fade-in">
-                        <div className="d-flex justify-content-between align-items-end mb-3">
-                            <h6 className="fw-bold mb-0 text-muted">DN Groups</h6>
-                            <button className="btn btn-primary btn-sm shadow-sm" onClick={handleStartAdd}>
-                                <i className="bi bi-plus-lg me-1"></i> New Entry
-                            </button>
-                        </div>
-                        <div className="row g-3">
-                            {dnKeys.map((dn) => (
-                                <div key={dn} className="col-12">
-                                    <div className="card border-0 shadow-sm p-3 d-flex flex-row align-items-center gap-3 cursor-pointer" onClick={() => handleDnClick(dn)}>
-                                        <div className="bg-light rounded p-3 text-primary"><i className="bi bi-folder-fill fs-3"></i></div>
-                                        <div className="flex-grow-1">
-                                            <h6 className="fw-bold mb-0">{dn}</h6>
-                                            <small className="text-muted">{groupedData[dn].length} entries</small>
-                                        </div>
-                                        <i className="bi bi-chevron-right text-muted"></i>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {(mode === "DN_ENTRIES" || mode === "DN_TABLE") && (
+                
+                {mode === "LIST" && (
                     <div className="animate-fade-in">
                         <div className="d-flex justify-content-between align-items-center mb-4">
-                            <div>
-                                <h4 className="fw-bold mb-1">{selectedDn}</h4>
-                                <p className="text-muted small mb-0">
-                                    {mode === "DN_ENTRIES" ? "Select an entry to complete data." : "View and manage column order."}
-                                </p>
-                            </div>
-                            <div className="btn-group shadow-sm">
-                                <button className={`btn btn-sm ${mode === "DN_ENTRIES" ? "btn-primary" : "btn-white border"}`} onClick={() => setMode("DN_ENTRIES")}>
-                                    <i className="bi bi-list-ul me-1"></i> List
-                                </button>
-                                <button className={`btn btn-sm ${mode === "DN_TABLE" ? "btn-primary" : "btn-white border"}`} onClick={() => setMode("DN_TABLE")}>
-                                    <i className="bi bi-table me-1"></i> Table
-                                </button>
-                            </div>
+                             <div><h4 className="fw-bold mb-1">Entries</h4><p className="text-muted small mb-0">View all individual entries.</p></div>
+                             <button className="btn btn-primary btn-sm shadow-sm rounded-3" onClick={() => { setEditingEntry(null); setFormKey(p => p + 1); setMode("ADD"); }}><i className="bi bi-plus-lg me-1"></i> New Entry</button>
                         </div>
-                        {mode === "DN_ENTRIES"
-                            ? renderEntryList(groupedData[selectedDn] || [])
-                            : renderTable(groupedData[selectedDn] || [], `${dnLabel}: ${selectedDn}`, false)
-                        }
+                        
+                        <DataEntryList 
+                            data={entries} 
+                            columnOrder={listColumnOrder} 
+                            allComponents={allComponents} 
+                            onEdit={(row) => { setEditingEntry({...row}); setFormKey(p => p+1); setMode("EDIT"); }} 
+                        />
                     </div>
                 )}
 
-                {mode === "PROJECT_SHEET" && (
+                {mode === "ALL_DATA" && (
                     <div className="animate-fade-in bg-white p-4 shadow-sm" style={{ minHeight: "800px" }}>
-                        {renderTable(entries, "Master Report", true)}
+                        <DynamicTable 
+                            data={entries} title="Master Report" formTitle={form.title} isReportMode={true}
+                            columnOrder={columnOrder} 
+                            allComponents={allComponents} 
+                            customColumns={customColumns} 
+                            projectDetails={projectDetails}
+                            dnKey={dnKey} dnLabel={dnLabel} remarksKey={remarksKey}
+                            onAddColumn={() => setShowCalcModal(true)} 
+                            onDeleteColumn={(k) => { 
+                                const newCols = customColumns.filter(c => c.key !== k);
+                                setCustomColumns(newCols);
+                                setColumnOrder(p => p.filter(x => x !== k)); 
+                            }}
+                            onColumnDrop={handleColumnDrop} onUpdateEntry={handleCellUpdate} onDeleteRow={onDeleteRow}
+                            onExportExcel={handleExportExcel} onExportPDF={handleExportPDF}
+                            onLayoutChange={(newLayout) => setPdfLayout(newLayout)}
+                        />
                     </div>
                 )}
 
-                {(mode === "ADD_FORM" || mode === "EDIT_FORM") && (
+                {(mode === "ADD" || mode === "EDIT") && (
                     <div className="d-flex justify-content-center py-4">
                         <div className="card border-0 shadow-sm w-100" style={{ maxWidth: "800px", borderRadius: "16px" }}>
                             <div className="card-header bg-white border-bottom py-3 px-4">
-                                <div className="d-flex align-items-center gap-3">
-                                    <button onClick={() => selectedDn ? setMode("DN_ENTRIES") : setMode("GROUPS")} className="btn btn-light rounded-circle border"><i className="bi bi-x-lg"></i></button>
+                                <div className="d-flex align-items-center justify-content-between">
                                     <div>
-                                        <small className="text-muted fw-bold text-uppercase">{mode === "EDIT_FORM" ? "Fill Balanced Data" : "New Entry"}</small>
+                                        <small className="text-muted fw-bold text-uppercase">{mode === "EDIT" ? "Edit Entry" : "New Entry"}</small>
                                         <h5 className="fw-bold mb-0">{form.title}</h5>
                                     </div>
+                                    <button onClick={() => setMode("LIST")} className="btn btn-light rounded-circle border"><i className="bi bi-x-lg"></i></button>
                                 </div>
                             </div>
                             <div className="card-body p-4">
-                                <CustomFormRenderer
-                                    key={formKey}
-                                    schema={form.schema}
-                                    initialData={getInitialFormData()}
-                                    onFormReady={handleFormReady}
+                                <CustomFormRenderer 
+                                    key={formKey} 
+                                    schema={activeSchema} 
+                                    initialData={mode === "EDIT" && editingEntry ? editingEntry : {}} 
+                                    onFormReady={handleFormReady} 
                                 />
                             </div>
                             <div className="card-footer bg-light py-3 px-4 border-top d-flex justify-content-end gap-2">
-                                {mode === "ADD_FORM" && (
-                                    <button className="btn btn-white border" onClick={() => handleCustomSubmit('SAVE_AND_CONTINUE')}>Save & Add Another</button>
-                                )}
-                                <button className="btn btn-primary" onClick={() => handleCustomSubmit('SAVE_AND_EXIT')}>
-                                    {mode === "EDIT_FORM" ? "Update & Finish" : "Save & Exit"}
-                                </button>
+                                {mode === "ADD" && <button className="btn btn-white border" onClick={() => handleCustomSubmit('SAVE_AND_CONTINUE')}>Save & Add Another</button>}
+                                <button className="btn btn-primary" onClick={() => handleCustomSubmit('SAVE_AND_EXIT')}>{mode === "EDIT" ? "Update & Finish" : "Save & Exit"}</button>
                             </div>
                         </div>
                     </div>

@@ -56,12 +56,11 @@ const App = () => {
 
   // 2. Delete Form
   const handleDeleteForm = (id) => {
-    if (window.confirm("Delete this form and all its data?")) {
-      const updatedForms = forms.filter(f => f.id !== id);
-      const updatedResponses = { ...responses };
-      delete updatedResponses[id];
-      saveData(updatedForms, updatedResponses);
-    }
+    // Alert removed: Dashboard handles the confirmation modal now
+    const updatedForms = forms.filter(f => f.id !== id);
+    const updatedResponses = { ...responses };
+    delete updatedResponses[id];
+    saveData(updatedForms, updatedResponses);
   };
 
   // 3. Open Entry Manager (The "Page 2")
@@ -82,7 +81,7 @@ const App = () => {
     saveData(null, updatedResponses);
   };
 
-  // 5. Update Existing Row (Edit) - ✅ NEW ADDITION
+  // 5. Update Existing Row (Edit)
   const handleUpdateEntry = (updatedEntry) => {
     const currentList = responses[selectedFormId] || [];
     
@@ -98,9 +97,11 @@ const App = () => {
     saveData(null, updatedResponses);
   };
 
-  // 6. Delete Row
+  // 6. Delete Row (Entry)
   const handleDeleteEntry = (rowId) => {
-    if (!window.confirm("Delete this entry?")) return;
+    // UPDATED: Alert removed. 
+    // The confirmation UI (Modal) should be implemented inside FormEntryManager/DynamicTable 
+    // before calling this function. This function now strictly deletes.
     const currentList = responses[selectedFormId] || [];
     const updatedList = currentList.filter(row => row._rowId !== rowId);
     const updatedResponses = { 
@@ -137,7 +138,7 @@ const App = () => {
         <div className=" px-4 px-lg-5">
           <span 
             className="navbar-brand d-flex align-items-center gap-2 fw-bold mb-0 text-dark" 
-            style={{ cursor: "pointer", fontSize: "1.59rem", letterSpacing: "-0.1px" }} 
+            style={{ cursor: "pointer", fontSize: "1.9rem", letterSpacing: "-0.1px" }} 
             onClick={() => setView("dashboard")}
           >
             {/* Modern Logo Mark */}
