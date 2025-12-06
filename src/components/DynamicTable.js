@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // 1. Added useRef
 import { calculateCellValue } from '../utils/formHelpers';
 
 const DynamicTable = ({ 
@@ -11,7 +11,7 @@ const DynamicTable = ({
     customColumns, 
     projectDetails, 
     dnKey, 
-    dnLabel,
+    dnLabel, 
     remarksKey,
     onAddColumn,
     onDeleteColumn,
@@ -20,7 +20,10 @@ const DynamicTable = ({
     onDeleteRow,
     onExportExcel,
     onExportPDF,
-    onLayoutChange 
+    onLayoutChange,
+    // --- UPDATED: Receive Color Props from Parent ---
+    themeColor, 
+    onThemeColorChange
 }) => {
     // --- State ---
     const [draggedColumn, setDraggedColumn] = useState(null);
@@ -37,11 +40,15 @@ const DynamicTable = ({
     // --- Modal State ---
     const [columnToDelete, setColumnToDelete] = useState(null);
 
-    // --- Logic: Hide DN/Remarks Column if not in components ---
+    // --- REMOVED: Local state for color removed ---
+    // const [themeColor, setThemeColor] = useState("#00B050");
+    
+    // 2. Create a Ref to trigger the hidden color input
+    const colorInputRef = useRef(null);
+
+    // --- Logic ---
     const showDnColumn = allComponents.some(c => c.key === dnKey);
     const showRemarksColumn = allComponents.some(c => c.key === remarksKey);
-
-    const themeColor = "#00B050"; 
 
     // --- Effects ---
     useEffect(() => {
@@ -63,13 +70,9 @@ const DynamicTable = ({
         const newHeaders = [...localHeaders];
         const [movedItem] = newHeaders.splice(draggedHeader, 1);
         newHeaders.splice(targetIndex, 0, movedItem);
-        
         setLocalHeaders(newHeaders);
         setDraggedHeader(null);
-
-        if (onLayoutChange) {
-            onLayoutChange({ headers: newHeaders, footers: localFooters });
-        }
+        if (onLayoutChange) onLayoutChange({ headers: newHeaders, footers: localFooters });
     };
 
     // --- Footer Handlers ---
@@ -82,13 +85,9 @@ const DynamicTable = ({
         const newFooters = [...localFooters];
         const [movedItem] = newFooters.splice(draggedFooter, 1);
         newFooters.splice(targetIndex, 0, movedItem);
-        
         setLocalFooters(newFooters);
         setDraggedFooter(null);
-
-        if (onLayoutChange) {
-            onLayoutChange({ headers: localHeaders, footers: newFooters });
-        }
+        if (onLayoutChange) onLayoutChange({ headers: localHeaders, footers: newFooters });
     };
 
     const getHeaderStyle = (isDragging = false) => ({
@@ -173,14 +172,37 @@ const DynamicTable = ({
             {isReportMode && (
                 <div className="mb-4">
                     <div className="d-flex justify-content-between align-items-center pt-2 mb-4 px-3">
-                        <div className="d-flex gap-2">
+                        <div className="d-flex gap-2 align-items-center">
                             <button className="btn btn-sm btn-success text-white rounded-3" onClick={onExportExcel}><i className="bi bi-file-earmark-excel me-2 "></i>Export Excel</button>
                             <button className="btn btn-sm btn-danger text-white rounded-3" onClick={onExportPDF}><i className="bi bi-file-earmark-pdf me-2"></i>Export PDF</button>
+                            
+                            {/* --- UPDATED: HIDDEN COLOR INPUT WITH ICON BUTTON --- */}
+                            <div className="ms-2">
+                                <button 
+                                    className="btn btn-sm btn-light border text-muted" 
+                                    onClick={() => colorInputRef.current.click()}
+                                    title="Change Theme Color"
+                                    style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                    <i className="bi bi-palette-fill"></i>
+                                </button>
+                                <input 
+                                    ref={colorInputRef}
+                                    type="color" 
+                                    value={themeColor} // Using Prop
+                                    onChange={(e) => onThemeColorChange(e.target.value)} // Using Prop Handler
+                                    style={{ display: 'none' }} // This hides the actual input
+                                />
+                            </div>
                         </div>
+
                         <h4 className="fw-bold text-dark m-0 position-absolute start-50 translate-middle-x">{formTitle || "Report"}</h4>
                         <button className="btn btn-sm btn-outline-primary text-nowrap rounded-3" onClick={onAddColumn}><i className="bi bi-plus-circle me-1"></i> Add Column</button>
                     </div>
+
+                    {/* --- PROJECT DETAILS HEADER --- */}
                     <div className="text-white fw-bold py-1 px-3 mb-3" style={{ backgroundColor: themeColor }}>Project Details</div>
+                    
                     <div className="row mb-4 px-2" style={{ fontSize: "1.0rem", fontWeight: "800" }}>
                         {localHeaders.map((item, index) => (
                             <div 
@@ -194,7 +216,7 @@ const DynamicTable = ({
                                     cursor: 'move',
                                     opacity: draggedHeader === index ? 0.4 : 1,
                                     transition: 'all 0.2s ease',
-                                    border: draggedHeader === index ? '2px dashed #00B050' : '2px solid transparent',
+                                    border: draggedHeader === index ? `2px dashed ${themeColor}` : '2px solid transparent',
                                     borderRadius: '4px'
                                 }}
                                 title="Drag to reorder"
@@ -206,7 +228,7 @@ const DynamicTable = ({
                 </div>
             )}
 
-            {/* --- TABLE HEADER --- */}
+            {/* --- TABLE HEADER (Standard Mode) --- */}
             {!isReportMode && (
                 <div className="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
                     <h5 className="fw-bold mb-0">{title}</h5>
@@ -244,13 +266,11 @@ const DynamicTable = ({
                                         >
                                             <div className="d-flex align-items-center justify-content-center gap-1">
                                                 <span>{getColumnLabel(key, comp)}</span>
-                                                {/* Delete Icon for Custom Columns */}
                                                 {isCustom && (
                                                     <div 
                                                         className="d-inline-flex align-items-center justify-content-center ms-1 text-danger bg-danger-subtle rounded-circle "
                                                         style={{width: '19px', height: '19px', cursor: 'pointer', transition: 'all 0.2s'}}
                                                         onClick={(e) => { e.stopPropagation(); setColumnToDelete(key); }} 
-                                                        title="Delete Column"
                                                     >
                                                         <i className="bi bi-trash3" style={{fontSize: '0.73rem'}}></i>
                                                     </div>
@@ -286,7 +306,6 @@ const DynamicTable = ({
                                         
                                         let displayValue = calculateCellValue(row, isCustom || comp || { key });
 
-                                        // --- Convert Internal Values to Labels for Select/Radio/Checkbox ---
                                         if (comp && (comp.type === 'select' || comp.type === 'radio' || comp.type === 'checkbox')) {
                                             const options = comp.values || comp.data?.values || [];
                                             if (options.length > 0) {
@@ -330,7 +349,6 @@ const DynamicTable = ({
                                         );
                                     })}
                                     
-                                    {/* CONDITIONAL REMARKS CELL */}
                                     {showRemarksColumn && (
                                         <td className="px-3 py-3 text-center small" style={{ whiteSpace: "nowrap" }}>{row[remarksKey] || "-"}</td>
                                     )}
@@ -343,7 +361,7 @@ const DynamicTable = ({
                 </div>
             </div>
 
-            {/* --- UPDATED: FOOTER SECTION (Vertical / Line by Line) --- */}
+            {/* --- FOOTER SECTION --- */}
             {isReportMode && (
                 <div className="mt-5 pt-4 pb-4 px-2 d-flex flex-column gap-4"> 
                     {localFooters.map((footer, index) => {
@@ -365,7 +383,6 @@ const DynamicTable = ({
                                 onDragStart={(e) => handleFooterDragStart(e, index)}
                                 onDragOver={(e) => handleFooterDragOver(e, index)}
                                 onDrop={(e) => handleFooterDrop(e, index)}
-                                title="Drag to reorder"
                             >
                                 <div 
                                     className="ps-2 pt-1 position-relative" 
@@ -381,14 +398,7 @@ const DynamicTable = ({
                                         <img 
                                             src={footer.value} 
                                             alt="Signature" 
-                                            style={{
-                                                height: '50px', 
-                                                maxWidth: '100%', 
-                                                objectFit: 'contain',
-                                                position: 'absolute', 
-                                                bottom: '5px',        
-                                                left: '10px'
-                                            }} 
+                                            style={{ height: '50px', maxWidth: '100%', objectFit: 'contain', position: 'absolute', bottom: '5px', left: '10px' }} 
                                         />
                                     ) : (
                                         <span className="fw-bold">{footer.value}</span>

@@ -22,6 +22,10 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
     
     const [editingEntry, setEditingEntry] = useState(null);
     const [showCalcModal, setShowCalcModal] = useState(false);
+
+    // --- NEW: Lifted Theme Color State ---
+    // This allows the parent to know the color for PDF export
+    const [reportThemeColor, setReportThemeColor] = useState("#00B050");
     
     const [columnOrder, setColumnOrder] = useState([]);
     
@@ -205,6 +209,16 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         return val;
     };
 
+    // --- HELPER: Hex to RGB for PDF ---
+    const hexToRgb = (hex) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? [
+            parseInt(result[1], 16),
+            parseInt(result[2], 16),
+            parseInt(result[3], 16)
+        ] : [0, 176, 80]; // Default Green if parsing fails
+    };
+
     // --- UPDATED EXCEL EXPORT ---
     const handleExportExcel = () => {
         const sheetData = [];
@@ -289,11 +303,17 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
     // --- UPDATED PDF EXPORT ---
     const handleExportPDF = () => {
         const doc = new jsPDF('l', 'mm', 'a4');
+
+        // --- APPLY THEME COLOR ---
+        const [r, g, b] = hexToRgb(reportThemeColor);
         
         doc.setFontSize(16); 
         doc.text(form.title || "Report", 14, 15);
         
-        doc.setFontSize(10); doc.setFillColor(0, 176, 80); doc.rect(14, 20, 269, 7, 'F');
+        doc.setFontSize(10); 
+        // Use Dynamic RGB
+        doc.setFillColor(r, g, b); 
+        doc.rect(14, 20, 269, 7, 'F');
         doc.setTextColor(255, 255, 255); doc.text("Project Details", 16, 25); doc.setTextColor(0, 0, 0);
         
         let y = 35;
@@ -344,7 +364,8 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
             startY: y + 10, 
             head: [pdfHeaders], 
             body: body, 
-            headStyles: { fillColor: [0, 176, 80] }, 
+            // Use Dynamic RGB for Table Header
+            headStyles: { fillColor: [r, g, b] }, 
             styles: { fontSize: 8 }, 
             theme: 'grid' 
         });
@@ -482,6 +503,10 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                             customColumns={customColumns} 
                             projectDetails={projectDetails}
                             dnKey={dnKey} dnLabel={dnLabel} remarksKey={remarksKey}
+                            // --- PASSING STATE FROM PARENT ---
+                            themeColor={reportThemeColor} 
+                            onThemeColorChange={setReportThemeColor}
+                            // ---------------------------------
                             onAddColumn={() => setShowCalcModal(true)} 
                             onDeleteColumn={(k) => { 
                                 const newCols = customColumns.filter(c => c.key !== k);

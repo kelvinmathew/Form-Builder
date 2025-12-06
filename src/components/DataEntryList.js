@@ -1,88 +1,170 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
+    // --- PAGINATION STATE ---
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+
+    // --- PAGINATION LOGIC ---
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    
+    // Slice the data for the current view
+    const currentData = data.slice(indexOfFirstItem, indexOfLastItem);
+    
+    // Calculate total pages
+    const totalPages = Math.ceil(data.length / itemsPerPage);
+
+    // Change page handler
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
     // Show 4 preview keys as before
     const previewKeys = columnOrder.slice(0, 4);
 
     return (
         <div className="d-flex flex-column gap-3">
-            {data.map((row, idx) => (
-                <div
-                    key={row._rowId || idx}
-                    className="card border-0 shadow-sm w-100 cursor-pointer entry-card"
-                    onClick={() => onEdit(row)}
-                    style={{ borderRadius: "12px", transition: "all 0.2s ease-in-out", backgroundColor: "#fff" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 20px rgba(201, 28, 28, 0.08)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(143, 34, 34, 0.04)"; }}
-                >
-                    <div className="card-body p-4">
-                        <div className="row align-items-center g-4">
-                            
-                            {/* 1. Entry Info Section (Left) */}
-                            <div className="col-12 col-md-3 d-flex flex-column justify-content-center border-end-md">
-                                <div className="d-flex align-items-center gap-2 mb-2">
-                                    <div className="rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-1 fw-bold " style={{ fontSize: "14px" }}>
-                                        <i className="bi bi-hash me-0"></i> {idx + 1}
+            
+            {/* List Meta Header (Optional: Shows Page Info) */}
+            {data.length > 0 && (
+                <div className="d-flex justify-content-end px-2 mb-1">
+                    <span className="text-muted" style={{ fontSize: "12px" }}>
+                        Page {currentPage} of {totalPages}
+                    </span>
+                </div>
+            )}
+
+            {/* Mapped over currentData (Paginated) instead of all data */}
+            {currentData.map((row, idx) => {
+                // Calculate the actual row number based on page
+                const absoluteRowNumber = indexOfFirstItem + idx + 1;
+
+                return (
+                    <div
+                        key={row._rowId || idx}
+                        className="card border-0 shadow-sm w-100 cursor-pointer entry-card"
+                        onClick={() => onEdit(row)}
+                        style={{ borderRadius: "12px", transition: "all 0.2s ease-in-out", backgroundColor: "#fff" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 20px rgba(201, 28, 28, 0.08)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(143, 34, 34, 0.04)"; }}
+                    >
+                        <div className="card-body p-4">
+                            <div className="row align-items-center g-4">
+                                
+                                {/* 1. Entry Info Section (Left) */}
+                                <div className="col-12 col-md-3 d-flex flex-column justify-content-center border-end-md">
+                                    <div className="d-flex align-items-center gap-2 mb-2">
+                                        <div className="rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-1 fw-bold " style={{ fontSize: "14px" }}>
+                                            {/* Updated to show absolute row number (e.g. 21, 22) */}
+                                            <i className="bi bi-hash me-0"></i> {absoluteRowNumber}
+                                        </div>
+                                    </div>
+                                    <div className="d-flex align-items-center text-muted" style={{ fontSize: "14px" }}>
+                                        <i className="bi bi-clock me-1"></i>
+                                        <span>{row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'Just now'}</span>
                                     </div>
                                 </div>
-                                <div className="d-flex align-items-center text-muted" style={{ fontSize: "14px" }}>
-                                    <i className="bi bi-clock me-1"></i>
-                                    <span>{row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'Just now'}</span>
-                                </div>
-                            </div>
 
-                            {/* 2. Data Preview Section (Middle) */}
-                            <div className="col-12 col-md-7">
-                                <div className="row g-4">
-                                    {previewKeys.map(key => {
-                                        const comp = allComponents.find(c => c.key === key);
-                                        
-                                        // Logic to get Label instead of Internal ID
-                                        let displayVal = row[key];
+                                {/* 2. Data Preview Section (Middle) */}
+                                <div className="col-12 col-md-7">
+                                    <div className="row g-4">
+                                        {previewKeys.map(key => {
+                                            const comp = allComponents.find(c => c.key === key);
+                                            
+                                            // Logic to get Label instead of Internal ID
+                                            let displayVal = row[key];
 
-                                        if (comp && (comp.type === 'select' || comp.type === 'radio' || comp.type === 'checkbox')) {
-                                            const options = comp.values || comp.data?.values || [];
-                                            if (options.length > 0) {
-                                                if (Array.isArray(displayVal)) {
-                                                    displayVal = displayVal.map(val => {
-                                                        const match = options.find(opt => opt.value === val);
-                                                        return match ? match.label : val;
-                                                    }).join(", ");
-                                                } else {
-                                                    const match = options.find(opt => opt.value === displayVal);
-                                                    if (match) displayVal = match.label;
+                                            if (comp && (comp.type === 'select' || comp.type === 'radio' || comp.type === 'checkbox')) {
+                                                const options = comp.values || comp.data?.values || [];
+                                                if (options.length > 0) {
+                                                    if (Array.isArray(displayVal)) {
+                                                        displayVal = displayVal.map(val => {
+                                                            const match = options.find(opt => opt.value === val);
+                                                            return match ? match.label : val;
+                                                        }).join(", ");
+                                                    } else {
+                                                        const match = options.find(opt => opt.value === displayVal);
+                                                        if (match) displayVal = match.label;
+                                                    }
                                                 }
                                             }
-                                        }
 
-                                        return (
-                                            <div key={key} className="col-6 col-lg-3">
-                                                {/* HEADER: 16px (14px + 2px) */}
-                                                <div className="text-black fw-bold mb-3 text-uppercase" style={{ fontSize: "12.3px", letterSpacing: "0.0px" }}>
-                                                    {comp?.label || key}
+                                            return (
+                                                <div key={key} className="col-6 col-lg-3">
+                                                    {/* HEADER: 16px (14px + 2px) */}
+                                                    <div className="text-black fw-bold mb-3 text-uppercase" style={{ fontSize: "12.3px", letterSpacing: "0.0px" }}>
+                                                        {comp?.label || key}
+                                                    </div>
+                                                    {/* VALUE: 14px */}
+                                                    <div className="text-dark text-truncate" style={{ fontSize: "13.5px" }}>
+                                                        {displayVal ? displayVal : <span className="text-muted opacity-50">-</span>}
+                                                    </div>
                                                 </div>
-                                                {/* VALUE: 14px */}
-                                                <div className="text-dark text-truncate" style={{ fontSize: "13.5px" }}>
-                                                    {displayVal ? displayVal : <span className="text-muted opacity-50">-</span>}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* 3. Action Button Section (Right) */}
-                            <div className="col-12 col-md-2 text-md-end d-flex align-items-center justify-content-md-end justify-content-start">
-                                <button className="btn btn-light rounded-pill px-4 py-2 text-primary fw-bold border-0 d-flex align-items-center gap-2 hover-scale" style={{ fontSize: "14px" }}>
-                                    <span></span>
-                                    <i className="bi bi-pencil-square"></i>
-                                </button>
+                                {/* 3. Action Button Section (Right) */}
+                                <div className="col-12 col-md-2 text-md-end d-flex align-items-center justify-content-md-end justify-content-start">
+                                    <button className="btn btn-light rounded-pill px-4 py-2 text-primary fw-bold border-0 d-flex align-items-center gap-2 hover-scale" style={{ fontSize: "14px" }}>
+                                        <span></span>
+                                        <i className="bi bi-pencil-square"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            ))}
+                );
+            })}
 
+            {/* --- PAGINATION CONTROLS --- */}
+            {data.length > 0 && (
+              <div className="d-flex justify-content-end align-items-center mt-4 gap-2">
+                {/* Previous Button */}
+                <button
+                  className="btn btn-white border shadow-sm"
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  style={{ borderRadius: "8px", fontSize: "14px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  <i className="bi bi-chevron-left"></i>
+                </button>
+
+                {/* Page Numbers */}
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    key={i + 1}
+                    onClick={() => paginate(i + 1)}
+                    className={`btn shadow-sm fw-semibold ${currentPage === i + 1 ? 'text-white' : 'text-dark bg-white border'}`}
+                    style={{
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      backgroundColor: currentPage === i + 1 ? "#4F46E5" : "#fff",
+                      width: "35px",
+                      height: "35px",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+
+                {/* Next Button */}
+                <button
+                  className="btn btn-white border shadow-sm"
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  style={{ borderRadius: "8px", fontSize: "14px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  <i className="bi bi-chevron-right"></i>
+                </button>
+              </div>
+            )}
+
+            {/* Empty State */}
             {data.length === 0 && (
                 <div className="text-center py-5 rounded-4 border border-dashed" style={{backgroundColor: "#f8f9fa"}}>
                     <i className="bi bi-inbox text-muted fs-1 mb-3 d-block opacity-50"></i>
