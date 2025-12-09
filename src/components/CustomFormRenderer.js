@@ -140,16 +140,16 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
         const error = errors[key];
         const isRequired = validate?.required;
 
-        // Label UI
+        // Label UI - UPDATED to 14px
         const labelElement = (
-            <label className="form-label fw-bold text-dark mb-2" style={{fontSize: '1rem'}}>
+            <label className="form-label fw-bold text-dark mb-2" style={{ fontSize: '14px' }}>
                 {label} {isRequired && <span className="text-danger">*</span>}
             </label>
         );
 
         // Error UI
         const errorElement = error && (
-            <div className="text-danger small mt-2 d-flex align-items-center animate-shake">
+            <div className="text-danger mt-2 d-flex align-items-center animate-shake" style={{ fontSize: '13px' }}>
                 <i className="bi bi-exclamation-circle-fill me-2"></i>{error}
             </div>
         );
@@ -170,7 +170,8 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
                             value={value}
                             onChange={(e) => handleChange(key, e.target.value)}
                             onBlur={() => setTouched(p => ({...p, [key]: true}))}
-                            style={{ borderRadius: '12px', minHeight: '50px' }}
+                            // UPDATED: fontSize 14px
+                            style={{ borderRadius: '12px', minHeight: '50px', fontSize: '14px' }}
                         >
                             <option value="">Select an option...</option>
                             {component.data?.values?.map((opt, i) => (
@@ -203,7 +204,8 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
                                             onChange={(e) => handleChange(key, e.target.value)}
                                             style={{ cursor: 'pointer', transform: 'scale(1.2)' }}
                                         />
-                                        <span style={{fontSize: '1rem'}}>{opt.label}</span>
+                                        {/* UPDATED: fontSize 14px */}
+                                        <span style={{ fontSize: '14px' }}>{opt.label}</span>
                                     </label>
                                 );
                             })}
@@ -233,13 +235,14 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
                                             onChange={(e) => handleCheckboxChange(key, optVal, e.target.checked)}
                                             style={{ cursor: 'pointer', transform: 'scale(1.2)' }}
                                         />
-                                        <span style={{fontSize: '1rem'}}>{opt.label}</span>
+                                        {/* UPDATED: fontSize 14px */}
+                                        <span style={{ fontSize: '14px' }}>{opt.label}</span>
                                     </label>
                                 );
                             })}
                         </div>
                         {(!component.values || component.values.length === 0) && (
-                            <div className="text-muted p-3 bg-light rounded-3 text-center fst-italic">No options available</div>
+                            <div className="text-muted p-3 bg-light rounded-3 text-center fst-italic" style={{fontSize: '14px'}}>No options available</div>
                         )}
                     </div>
                 );
@@ -254,7 +257,8 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
                         value={value}
                         onChange={(e) => handleChange(key, e.target.value)}
                         onBlur={() => setTouched(p => ({...p, [key]: true}))}
-                        style={{ borderRadius: '12px', resize: 'vertical' }}
+                        // UPDATED: fontSize 14px
+                        style={{ borderRadius: '12px', resize: 'vertical', fontSize: '14px' }}
                     />
                 );
                 break;
@@ -265,10 +269,10 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
                          <div className="mb-3">
                             <i className="bi bi-cloud-arrow-up text-primary" style={{fontSize: '2.5rem'}}></i>
                          </div>
-                         <h6 className="fw-bold mb-1">Drag and drop or click to upload</h6>
-                         <p className="text-muted small mb-3">Support for images, docs, pdf</p>
+                         <h6 className="fw-bold mb-1" style={{fontSize: '14px'}}>Drag and drop or click to upload</h6>
+                         <p className="text-muted mb-3" style={{fontSize: '13px'}}>Support for images, docs, pdf</p>
                          
-                         <label className="btn btn-primary rounded-pill px-4 py-2 cursor-pointer shadow-sm">
+                         <label className="btn btn-primary rounded-pill px-4 py-2 cursor-pointer shadow-sm" style={{fontSize: '14px'}}>
                              Browse Files
                              <input
                                 type="file"
@@ -279,7 +283,7 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
                          {value && (
                             <div className="mt-3 p-2 bg-white rounded border d-inline-flex align-items-center animate-up">
                                 <i className="bi bi-file-earmark-check text-success me-2"></i>
-                                <span className="small fw-bold text-dark">{value.split('\\').pop()}</span>
+                                <span className="fw-bold text-dark" style={{fontSize: '13px'}}>{value.split('\\').pop()}</span>
                             </div>
                          )}
                     </div>
@@ -298,7 +302,8 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
                             className={inputClass}
                             value={value}
                             onChange={(e) => handleChange(key, e.target.value)}
-                            style={{ borderRadius: '0 12px 12px 0', borderLeft: 'none' }}
+                            // UPDATED: fontSize 14px
+                            style={{ borderRadius: '0 12px 12px 0', borderLeft: 'none', fontSize: '14px' }}
                         />
                     </div>
                 );
@@ -315,7 +320,8 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
                             className={inputClass}
                             value={value}
                             onChange={(e) => handleChange(key, e.target.value)}
-                            style={{ borderRadius: '0 12px 12px 0', borderLeft: 'none' }}
+                            // UPDATED: fontSize 14px
+                            style={{ borderRadius: '0 12px 12px 0', borderLeft: 'none', fontSize: '14px' }}
                         />
                     </div>
                 );
@@ -330,7 +336,8 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
                         value={value}
                         onChange={(e) => handleChange(key, e.target.value)}
                         onBlur={() => setTouched(p => ({...p, [key]: true}))}
-                        style={{ borderRadius: '12px', minHeight: '50px' }}
+                        // UPDATED: fontSize 14px
+                        style={{ borderRadius: '12px', minHeight: '50px', fontSize: '14px' }}
                     />
                 );
                 break;
@@ -379,7 +386,7 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
                 }
                 .border-dashed { border-style: dashed !important; }
                 .cursor-pointer { cursor: pointer; }
-                ::placeholder { color: #94a3b8 !important; opacity: 1; }
+                ::placeholder { color: #94a3b8 !important; opacity: 1; font-size: 14px; }
             `}</style>
             
             <div className="row g-4">

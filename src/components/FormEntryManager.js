@@ -547,14 +547,65 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
 
             {/* --- CSS OVERRIDES --- */}
             <style>{`
-                .form-control, .form-select { height: 38px !important; min-height: 38px !important; padding: 4px 12px !important; font-size: 14px !important; border-radius: 6px !important; }
-                textarea.form-control { height: auto !important; min-height: 80px !important; }
-                .form-check, .form-radio, .formio-component-checkbox div[class*="border"], .formio-component-radio div[class*="border"], .formio-component-selectboxes div[class*="border"] { border: none !important; padding: 0 !important; margin: 0 !important; background-color: transparent !important; box-shadow: none !important; }
-                .form-check { display: flex !important; align-items: center !important; margin-bottom: 6px !important; min-height: auto !important; }
-                .form-check-input { width: 16px !important; height: 14px !important; margin-top: 0 !important; margin-right: 8px !important; flex-shrink: 0; }
-                .form-check-label { font-size: 14px !important; color: #333 !important; padding-top: 2px !important; }
-                .form-group, .formio-component { margin-bottom: 15px !important; }
-                label { font-size: 13px !important; font-weight: 600 !important; margin-bottom: 4px !important; color: #4b5563; }
+                /* 1. INPUTS & SELECTS */
+                .form-control, .form-select {
+                    height: 38px !important;
+                    min-height: 38px !important;
+                    padding: 4px 12px !important;
+                    font-size: 14px !important; /* Enforced 14px */
+                    border-radius: 6px !important;
+                }
+                
+                textarea.form-control {
+                    height: auto !important;
+                    min-height: 80px !important;
+                }
+
+                /* 2. CHECKBOX & RADIO STYLES */
+                .form-check, 
+                .form-radio,
+                .formio-component-checkbox div[class*="border"], 
+                .formio-component-radio div[class*="border"],
+                .formio-component-selectboxes div[class*="border"] {
+                    border: none !important;        
+                    padding: 0 !important;          
+                    margin: 0 !important;
+                    background-color: transparent !important; 
+                    box-shadow: none !important;
+                }
+
+                .form-check {
+                    display: flex !important;
+                    align-items: center !important;
+                    margin-bottom: 6px !important; 
+                    min-height: auto !important;
+                }
+
+                .form-check-input {
+                    width: 16px !important;
+                    height: 16px !important;
+                    margin-top: 0 !important;
+                    margin-right: 8px !important;
+                    flex-shrink: 0;
+                }
+
+                /* 3. LABELS */
+                .form-check-label {
+                    font-size: 14px !important; /* Enforced 14px */
+                    color: #333 !important;
+                    padding-top: 2px !important;
+                }
+
+                label {
+                    font-size: 14px !important; /* Enforced 14px (Changed from 13px) */
+                    font-weight: 600 !important;
+                    margin-bottom: 4px !important;
+                    color: #4b5563;
+                }
+
+                .form-group, .formio-component {
+                    margin-bottom: 15px !important;
+                }
             `}</style>
         </div>
     );
