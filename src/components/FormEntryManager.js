@@ -150,7 +150,7 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         if (!formInstanceRef.current) return;
         formInstanceRef.current.submit().then((submission) => {
             const timestamp = new Date().toISOString();
-            const displayDate = new Date().toLocaleString(); 
+            const displayDate = new Date().toLocaleDateString(); // Simplified date 
 
             if (mode === "EDIT" && editingEntry) {
                 onUpdate({ 
@@ -229,6 +229,7 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
 
     // --- EXCEL EXPORT ---
     const handleExportExcel = () => {
+        // ... (Export logic remains same)
         const sheetData = [];
         sheetData.push([form.title || "Form Report", ""]);
         
@@ -250,15 +251,10 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
 
         entries.forEach(row => {
             const rData = [];
-            
-            if (showDnColumn) {
-                rData.push(row[dnKey] || "");
-            }
-
+            if (showDnColumn) rData.push(row[dnKey] || "");
             columnOrder.forEach(key => {
                 const conf = allComponents.find(c => c.key === key);
                 let val = (conf?.type === 'calculated') ? calculateCellValue(row, conf) : row[key];
-                
                 if (conf && (conf.type === 'select' || conf.type === 'radio' || conf.type === 'checkbox')) {
                     const options = conf.values || conf.data?.values || [];
                     if (options.length > 0) {
@@ -275,22 +271,14 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                 }
                 rData.push(formatExportValue(val));
             });
-
-            if (showRemarksColumn) {
-                rData.push(row[remarksKey] || "");
-            }
-
+            if (showRemarksColumn) rData.push(row[remarksKey] || "");
             sheetData.push(rData);
         });
 
         sheetData.push(["", ""]);
-        
         (pdfLayout.footers || []).forEach(f => { 
-            if (f.type === 'image') {
-                sheetData.push([""]); 
-            } else {
-                sheetData.push([f.value || ""]); 
-            }
+            if (f.type === 'image') { sheetData.push([""]); } 
+            else { sheetData.push([f.value || ""]); }
             sheetData.push([""]); 
         });
 
@@ -302,37 +290,28 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
 
     // --- PDF EXPORT ---
     const handleExportPDF = () => {
+        // ... (PDF logic remains same)
         const doc = new jsPDF('l', 'mm', 'a4');
         const [r, g, b] = hexToRgb(reportThemeColor);
-        
-        doc.setFontSize(16); 
-        doc.text(form.title || "Report", 14, 15);
-        
-        doc.setFontSize(10); 
-        doc.setFillColor(r, g, b); 
-        doc.rect(14, 20, 269, 7, 'F');
+        doc.setFontSize(16); doc.text(form.title || "Report", 14, 15);
+        doc.setFontSize(10); doc.setFillColor(r, g, b); doc.rect(14, 20, 269, 7, 'F');
         doc.setTextColor(255, 255, 255); doc.text("Project Details", 16, 25); doc.setTextColor(0, 0, 0);
-        
         let y = 35;
         (pdfLayout.headers || []).forEach((h, i) => {
             doc.text(`${h.label}: ${h.value || ""}`, (i % 2 === 0 ? 14 : 150), y);
             if (i % 2 !== 0) y += 6;
         });
         if ((pdfLayout.headers || []).length % 2 !== 0) y += 6;
-
         const pdfHeaders = [];
         if (showDnColumn) pdfHeaders.push(dnLabel);
         columnOrder.forEach(k => pdfHeaders.push(getLabel(k)));
         if (showRemarksColumn) pdfHeaders.push("Remarks");
-
         const body = entries.map(row => {
             const r = [];
             if (showDnColumn) r.push(row[dnKey] || "");
-
             columnOrder.forEach(key => {
                 const conf = allComponents.find(c => c.key === key);
                 let val = (conf?.type === 'calculated') ? calculateCellValue(row, conf) : row[key];
-
                 if (conf && (conf.type === 'select' || conf.type === 'radio' || conf.type === 'checkbox')) {
                     const options = conf.values || conf.data?.values || [];
                     if (options.length > 0) {
@@ -349,62 +328,37 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                 }
                 r.push(formatExportValue(val));
             });
-
             if (showRemarksColumn) r.push(row[remarksKey] || "");
             return r;
         });
-
-        autoTable(doc, { 
-            startY: y + 10, 
-            head: [pdfHeaders], 
-            body: body, 
-            headStyles: { fillColor: [r, g, b] }, 
-            styles: { fontSize: 8 }, 
-            theme: 'grid' 
-        });
-        
+        autoTable(doc, { startY: y + 10, head: [pdfHeaders], body: body, headStyles: { fillColor: [r, g, b] }, styles: { fontSize: 8 }, theme: 'grid' });
         let footerY = (doc.lastAutoTable?.finalY || 150) + 20;
         doc.setFontSize(10); doc.setFont("helvetica", "bold");
-        
         (pdfLayout.footers || []).forEach((f) => {
             if (footerY > 190) { doc.addPage(); footerY = 20; }
             const x = 14; 
-            
             if (f.type === 'image' && f.value && f.value.startsWith('data:image')) {
                 try {
                     doc.addImage(f.value, 'PNG', x, footerY - 10, 40, 15); 
-                    doc.setLineWidth(0.5); 
-                    doc.line(x, footerY + 7, x + 40, footerY + 7);
-                    footerY += 25; 
-                } catch (err) {
-                    console.error("PDF Image Error", err);
-                    footerY += 10;
-                }
+                    doc.setLineWidth(0.5); doc.line(x, footerY + 7, x + 40, footerY + 7); footerY += 25; 
+                } catch (err) { console.error("PDF Image Error", err); footerY += 10; }
             } else { 
-                if (f.value) {
-                    doc.setFont("helvetica", "normal"); 
-                    doc.text(f.value, x, footerY); 
-                    doc.setFont("helvetica", "bold"); 
-                    footerY += 10;
-                }
+                if (f.value) { doc.setFont("helvetica", "normal"); doc.text(f.value, x, footerY); doc.setFont("helvetica", "bold"); footerY += 10; }
             }
         });
-        
         doc.save(`${form?.title || "Report"}_${Date.now()}.pdf`);
     };
 
-    const handleFormReady = useCallback((inst) => { 
-        formInstanceRef.current = inst; 
-    }, []);
+    const handleFormReady = useCallback((inst) => { formInstanceRef.current = inst; }, []);
 
     const activeSchema = useMemo(() => {
         if (!form?.schema) return null;
-        return { 
-            ...form.schema, 
-            components: [...(form.schema.components || []), ...customColumns] 
-        };
+        return { ...form.schema, components: [...(form.schema.components || []), ...customColumns] };
     }, [form, customColumns]);
 
+    // Common Font Styles
+    const textStyle = { fontSize: "14px" };
+    const headingStyle = { fontSize: "16px", fontWeight: "bold" };
 
     // --- 5. RENDER ---
     if (!form) return <div className="p-5 text-center text-muted">Loading configuration...</div>;
@@ -418,14 +372,7 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                     <form onSubmit={handleUserSubmit}>
                         <div className="mb-4">
                             <label className="form-label fw-bold small text-uppercase text-muted">Your Name *</label>
-                            <input 
-                                type="text" 
-                                className="form-control form-control-lg"
-                                placeholder="Enter your name"
-                                value={tempName}
-                                onChange={(e) => setTempName(e.target.value)}
-                                autoFocus
-                            />
+                            <input type="text" className="form-control form-control-lg" placeholder="Enter your name" value={tempName} onChange={(e) => setTempName(e.target.value)} autoFocus />
                         </div>
                         <button type="submit" className="btn btn-primary btn-lg w-100">Continue to Form</button>
                     </form>
@@ -448,18 +395,11 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                                 <button type="button" className="btn-close" onClick={() => setShowNameModal(false)}></button>
                             </div>
                             <div className="modal-body pt-3 pb-4">
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    value={editingNameValue} 
-                                    onChange={(e) => setEditingNameValue(e.target.value)}
-                                    autoFocus
-                                    placeholder="Enter your name"
-                                />
+                                <input type="text" className="form-control" value={editingNameValue} onChange={(e) => setEditingNameValue(e.target.value)} autoFocus placeholder="Enter your name" />
                             </div>
                             <div className="modal-footer border-0 pt-0">
-                                <button type="button" className="btn btn-light rounded-pill px-3 btn-sm" onClick={() => setShowNameModal(false)}>Cancel</button>
-                                <button type="button" className="btn btn-primary rounded-pill px-3 btn-sm" onClick={saveEditedName}>Save Change</button>
+                                <button type="button" className="btn btn-outline-secondary btn-sm rounded-6 px-3" onClick={() => setShowNameModal(false)}>Cancel</button>
+                                <button type="button" className="btn btn-primary btn-sm rounded-6 px-3" onClick={saveEditedName}>Save Change</button>
                             </div>
                         </div>
                     </div>
@@ -470,46 +410,60 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                 <div className="container px-4">
                     <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
                         <div className="d-flex align-items-center gap-3">
-                            <button onClick={handleNavigationBack} className="btn btn-light border" style={{ borderRadius: "10px" }}><i className="bi bi-arrow-left"></i></button>
+                            {/* --- 1. CIRCLE BACK BUTTON --- */}
+                            <button 
+                                onClick={handleNavigationBack} 
+                                className="btn btn-white border shadow-sm rounded-circle d-flex align-items-center justify-content-center" 
+                                style={{ width: "40px", height: "40px" }}
+                            >
+                                <i className="bi bi-arrow-left"></i>
+                            </button>
                             <div>
-                                <h5 className="fw-bold mb-0 text-dark">{form.title}</h5>
+                                {/* --- 2. HEADING 16px --- */}
+                                <h5 className="text-dark mb-0 fs-5" style={headingStyle}>{form.title}</h5>
                                 <div className="d-flex align-items-center gap-2">
-                                    <small className=" fw-bold text-black" style={{ fontSize: "13.5px" }}>{mode === "LIST" ? "Entries List" : mode === "ALL_DATA" ? "All Records" : "Entry Form"}</small>
-                                    <span className="text-muted">•</span>
+                                    {/* --- 3. SUBTITLE LIGHT GREY (text-muted) --- */}
+                                    <small className="fw-normal text-muted" style={textStyle}>
+                                        {mode === "LIST" ? "Entries List" : mode === "ALL_DATA" ? "All Records" : "Entry Form"}
+                                    </small>
+                                    <span className="text-muted"></span>
                                     
-                                    {/* --- UPDATED: NAME DISPLAY WITH "PHOTO SYMBOL" BUTTON --- */}
                                     <div className="d-flex align-items-center gap-2">
                                         <div className="d-flex align-items-center gap-1">
                                             <i className="bi bi-person-circle text-success"></i>
                                             <span className="fw-bold text-dark small">{userName}</span>
                                         </div>
-                                        {/* Styled Button matching the "Second Photo Symbol" (Blue pencil in light square) */}
                                         <button 
                                             className="btn p-0 d-flex align-items-center justify-content-center" 
                                             onClick={openEditNameModal}
                                             title="Edit Name"
-                                            style={{
-                                                width: "24px",
-                                                height: "24px",
-                                                backgroundColor: "#eff6ff", // Light blue bg
-                                                borderRadius: "6px",
-                                                border: "none",
-                                                color: "#3b82f6", // Blue icon
-                                                transition: "all 0.2s"
-                                            }}
+                                            style={{ width: "24px", height: "24px", backgroundColor: "#eff6ff", borderRadius: "6px", border: "none", color: "#3b82f6", transition: "all 0.2s" }}
                                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#dbeafe"}
                                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#eff6ff"}
                                         >
                                             <i className="bi bi-pencil-square" style={{ fontSize: "12px" }}></i>
                                         </button>
                                     </div>
-
                                 </div>
                             </div>
                         </div>
-                        <div className="d-flex p-1 rounded-3 bg-light border">
-                            <button className={`btn btn-sm px-3 rounded-3 border-0 ${mode === "LIST" || mode === "ADD" || mode === "EDIT" ? "bg-white shadow-sm text-primary fw-bold" : "text-muted"}`} onClick={() => setMode("LIST")}><i className="bi bi-list-ul me-2"></i> Entries</button>
-                            <button className={`btn btn-sm px-3 rounded-3 border-0 ${mode === "ALL_DATA" ? "bg-white shadow-sm text-success fw-bold" : "text-muted"}`} onClick={() => setMode("ALL_DATA")}><i className="bi bi-table me-2"></i> All Data</button>
+
+                        {/* --- 4. SEPARATE BUTTONS (NOT TOGGLE GROUP) --- */}
+                        <div className="d-flex gap-2">
+                            <button 
+                                className={`btn shadow-sm rounded-3 px-3 ${mode === "LIST" || mode === "ADD" || mode === "EDIT" ? "btn-white border fw-bold text-dark" : "btn-light text-muted border-0"}`} 
+                                onClick={() => setMode("LIST")}
+                                style={textStyle}
+                            >
+                                <i className="bi bi-list-ul me-2"></i> Entries
+                            </button>
+                            <button 
+                                className={`btn shadow-sm rounded-3 px-3 ${mode === "ALL_DATA" ? "btn-white border fw-bold text-dark" : "btn-light text-muted border-0"}`} 
+                                onClick={() => setMode("ALL_DATA")}
+                                style={textStyle}
+                            >
+                                <i className="bi bi-table  me-2"></i> All Data
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -520,8 +474,17 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                 {mode === "LIST" && (
                     <div className="animate-fade-in">
                         <div className="d-flex justify-content-between align-items-center mb-4">
-                             <div><h4 className="fw-bold mb-1">Entries</h4><p className="text-muted small mb-0">View all individual entries.</p></div>
-                             <button className="btn btn-primary btn-sm shadow-sm rounded-3" onClick={() => { setEditingEntry(null); setFormKey(p => p + 1); setMode("ADD"); }}><i className="bi bi-plus-lg me-1"></i> New Entry</button>
+                             <div>
+                                <h4 className="fw-bold mb-1" style={headingStyle}>Entries</h4>
+                                <p className="text-muted mb-0" style={textStyle}>View all individual entries.</p>
+                             </div>
+                             <button 
+                                className="btn btn-primary shadow-sm rounded-3" 
+                                onClick={() => { setEditingEntry(null); setFormKey(p => p + 1); setMode("ADD"); }}
+                                style={textStyle}
+                             >
+                                <i className="bi bi-plus-lg me-1"></i> New Entry
+                             </button>
                         </div>
                         
                         <DataEntryList 
@@ -545,11 +508,7 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                             themeColor={reportThemeColor} 
                             onThemeColorChange={setReportThemeColor}
                             onAddColumn={() => setShowCalcModal(true)} 
-                            onDeleteColumn={(k) => { 
-                                const newCols = customColumns.filter(c => c.key !== k);
-                                setCustomColumns(newCols);
-                                setColumnOrder(p => p.filter(x => x !== k)); 
-                            }}
+                            onDeleteColumn={(k) => { setCustomColumns(p => p.filter(c => c.key !== k)); setColumnOrder(p => p.filter(x => x !== k)); }}
                             onColumnDrop={handleColumnDrop} onUpdateEntry={handleCellUpdate} onDeleteRow={onDeleteRow}
                             onExportExcel={handleExportExcel} onExportPDF={handleExportPDF}
                             onLayoutChange={(newLayout) => setPdfLayout(newLayout)}
@@ -564,7 +523,7 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                                 <div className="d-flex align-items-center justify-content-between">
                                     <div>
                                         <small className="text-muted fw-bold text-uppercase">{mode === "EDIT" ? "Edit Entry" : "New Entry"}</small>
-                                        <h5 className="fw-bold mb-0">{form.title}</h5>
+                                        <h5 className="fw-bold mb-0" style={headingStyle}>{form.title}</h5>
                                     </div>
                                     <button onClick={() => setMode("LIST")} className="btn btn-light rounded-circle border"><i className="bi bi-x-lg"></i></button>
                                 </div>
@@ -578,8 +537,8 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                                 />
                             </div>
                             <div className="card-footer bg-light py-3 px-4 border-top d-flex justify-content-end gap-2">
-                                {mode === "ADD" && <button className="btn btn-white border" onClick={() => handleCustomSubmit('SAVE_AND_CONTINUE')}>Save & Add Another</button>}
-                                <button className="btn btn-primary" onClick={() => handleCustomSubmit('SAVE_AND_EXIT')}>{mode === "EDIT" ? "Update & Finish" : "Save & Exit"}</button>
+                                {mode === "ADD" && <button className="btn btn-white border" onClick={() => handleCustomSubmit('SAVE_AND_CONTINUE')} style={textStyle}>Save & Add Another</button>}
+                                <button className="btn btn-primary" onClick={() => handleCustomSubmit('SAVE_AND_EXIT')} style={textStyle}>{mode === "EDIT" ? "Update & Finish" : "Save & Exit"}</button>
                             </div>
                         </div>
                     </div>
@@ -588,68 +547,14 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
 
             {/* --- CSS OVERRIDES --- */}
             <style>{`
-                /* 1. TEXT INPUTS: Keep them Compact & Uniform */
-                .form-control, .form-select {
-                    height: 38px !important;
-                    min-height: 38px !important;
-                    padding: 4px 12px !important;
-                    font-size: 14px !important;
-                    border-radius: 6px !important;
-                }
-                
-                textarea.form-control {
-                    height: auto !important;
-                    min-height: 80px !important;
-                }
-
-                /* 2. CHECKBOX & RADIO: REMOVE "CARD" STYLING */
-                .form-check, 
-                .form-radio,
-                .formio-component-checkbox div[class*="border"], 
-                .formio-component-radio div[class*="border"],
-                .formio-component-selectboxes div[class*="border"] {
-                    border: none !important;        
-                    padding: 0 !important;          
-                    margin: 0 !important;
-                    background-color: transparent !important; 
-                    box-shadow: none !important;
-                }
-
-                /* 3. ALIGNMENT & SPACING FOR OPTIONS */
-                .form-check {
-                    display: flex !important;
-                    align-items: center !important;
-                    margin-bottom: 6px !important; 
-                    min-height: auto !important;
-                }
-
-                /* 4. RESET THE INPUT CIRCLE/SQUARE SIZE */
-                .form-check-input {
-                    width: 16px !important;
-                    height: 14px !important;
-                    margin-top: 0 !important;
-                    margin-right: 8px !important;
-                    flex-shrink: 0;
-                }
-
-                /* 5. LABEL STYLING */
-                .form-check-label {
-                    font-size: 14px !important;
-                    color: #333 !important;
-                    padding-top: 2px !important;
-                }
-
-                /* 6. GENERAL FIELD SPACING */
-                .form-group, .formio-component {
-                    margin-bottom: 15px !important;
-                }
-
-                label {
-                    font-size: 13px !important;
-                    font-weight: 600 !important;
-                    margin-bottom: 4px !important;
-                    color: #4b5563;
-                }
+                .form-control, .form-select { height: 38px !important; min-height: 38px !important; padding: 4px 12px !important; font-size: 14px !important; border-radius: 6px !important; }
+                textarea.form-control { height: auto !important; min-height: 80px !important; }
+                .form-check, .form-radio, .formio-component-checkbox div[class*="border"], .formio-component-radio div[class*="border"], .formio-component-selectboxes div[class*="border"] { border: none !important; padding: 0 !important; margin: 0 !important; background-color: transparent !important; box-shadow: none !important; }
+                .form-check { display: flex !important; align-items: center !important; margin-bottom: 6px !important; min-height: auto !important; }
+                .form-check-input { width: 16px !important; height: 14px !important; margin-top: 0 !important; margin-right: 8px !important; flex-shrink: 0; }
+                .form-check-label { font-size: 14px !important; color: #333 !important; padding-top: 2px !important; }
+                .form-group, .formio-component { margin-bottom: 15px !important; }
+                label { font-size: 13px !important; font-weight: 600 !important; margin-bottom: 4px !important; color: #4b5563; }
             `}</style>
         </div>
     );

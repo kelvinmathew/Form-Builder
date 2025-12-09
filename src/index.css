@@ -22,11 +22,14 @@ body {
 h1, h2, h3, h4, h5, h6,
 input, button, select, textarea,
 .form-control, .form-select, .btn, 
-.navbar, .card, strong, b, label, span, p, div {
+.navbar, .card, strong, b, label,  p, div {
   font-family: 'SF Pro' !important;
-  font-size: 12xp;
+  font-size: 12px;
 }
 
+span{
+  font-size: 15px;
+}
 /* Utilities */
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, monospace; 

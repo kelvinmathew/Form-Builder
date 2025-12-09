@@ -18,6 +18,10 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
     const [searchTerm, setSearchTerm] = useState("");
     const dropdownRef = useRef(null);
 
+    // --- ERROR MODAL STATE ---
+    const [showError, setShowError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+
     // Reset state when modal opens/closes
     useEffect(() => {
         if (!show) {
@@ -26,14 +30,13 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
             setSelectedCols([]);
             setSearchTerm("");
             setIsDropdownOpen(false);
+            setShowError(false);
         }
     }, [show]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
-            // UPDATED: Ignore click if it's on the "Add Column" button
-            // This prevents the dropdown from closing immediately and causing the button to "jump" up, making you miss the click.
             if (
                 dropdownRef.current && 
                 !dropdownRef.current.contains(event.target) && 
@@ -57,18 +60,26 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
         if (!selectedCols.includes(key)) {
             setSelectedCols([...selectedCols, key]);
         }
-        // Optional: Keep dropdown open for multiple selection
         setSearchTerm(""); // Reset search after selection
     };
 
     const handleRemoveColumn = (key, e) => {
-        e.stopPropagation(); // Prevent opening dropdown when clicking 'X'
+        e.stopPropagation(); 
         setSelectedCols(prev => prev.filter(k => k !== key));
     };
 
     const handleSave = () => {
-        if (!colName.trim()) return alert("Please enter a column name");
-        if (selectedCols.length === 0) return alert("Please select at least one column");
+        // UPDATED: Use State for Error Modal instead of Alert
+        if (!colName.trim()) {
+            setErrorMessage("Please enter a column name.");
+            setShowError(true);
+            return;
+        }
+        if (selectedCols.length === 0) {
+            setErrorMessage("Please select at least one column to calculate.");
+            setShowError(true);
+            return;
+        }
 
         const newColumnConfig = {
             label: colName,
@@ -83,129 +94,142 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
     };
 
     return (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content border-0 shadow-lg rounded-5" style={{ minHeight: '400px' }}>
-                    <div className="modal-header border-bottom-3 pb-2">
-                        <h5 className="modal-title fw-bold">Add Custom Column</h5>
-                        <button type="button" className="btn-close" onClick={onClose}></button>
-                    </div>
-                    
-                    <div className="modal-body">
-                        {/* 1. Column Name */}
-                        <div className="mb-4">
-                            <label className="fw-bold small mb-4">Column Name *</label>
-                            <input 
-                                type="text" 
-                                className="form-control" 
-                                placeholder="e.g., Total Score"
-                                value={colName}
-                                onChange={(e) => setColName(e.target.value)}
-                            />
+        <>
+            {/* --- MAIN MODAL --- */}
+            <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+                <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-content border-0 shadow-lg rounded-5" style={{ minHeight: '400px' }}>
+                        <div className="modal-header border-bottom-3 pb-2">
+                            <h5 className="modal-title fw-bold">Add Custom Column</h5>
+                            <button type="button" className="btn-close" onClick={onClose}></button>
                         </div>
-
-                        {/* 2. Formula Type */}
-                        <div className="mb-4">
-                            <label className="fw-bold small mb-1">Formula Type *</label>
-                            <select 
-                                className="form-select"
-                                value={formulaType}
-                                onChange={(e) => setFormulaType(e.target.value)}
-                            >
-                                {FORMULA_TYPES.map(ft => (
-                                    <option key={ft.value} value={ft.value}>{ft.label}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* 3. Select Columns (Multi-Select Dropdown) */}
-                        <div className="mb-4" ref={dropdownRef}>
-                            <label className="fw-bold small mb-1">Select Columns *</label>
-                            
-                            {/* The Input / Display Area */}
-                            <div 
-                                className="form-control d-flex flex-wrap align-items-center gap-2" 
-                                style={{ minHeight: '42px', cursor: 'pointer', backgroundColor: '#fff' }}
-                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                            >
-                                {selectedCols.length === 0 && (
-                                    <span className="text-muted small">Search and select columns...</span>
-                                )}
-
-                                {selectedCols.map(key => {
-                                    const col = existingColumns.find(c => c.key === key);
-                                    return (
-                                        <span key={key} className="badge bg-success-subtle text-success border border-success-subtle rounded-pill d-flex align-items-center px-2 py-1">
-                                            {col ? col.label : key}
-                                            <i 
-                                                className="bi bi-x ms-1 cursor-pointer" 
-                                                style={{ fontSize: '1.1em' }}
-                                                onClick={(e) => handleRemoveColumn(key, e)}
-                                            ></i>
-                                        </span>
-                                    );
-                                })}
-                                
-                                <i className={`bi bi-chevron-${isDropdownOpen ? 'up' : 'down'} ms-auto text-muted`}></i>
+                        
+                        <div className="modal-body">
+                            {/* 1. Column Name */}
+                            <div className="mb-4">
+                                <label className="fw-bold small mb-4">Column Name *</label>
+                                <input 
+                                    type="text" 
+                                    className="form-control" 
+                                    placeholder="e.g., Total Score"
+                                    value={colName}
+                                    onChange={(e) => setColName(e.target.value)}
+                                />
                             </div>
 
-                            {/* The Dropdown Menu */}
-                            {/* UPDATED: Removed position-absolute so it pushes the footer down instead of covering it */}
-                            {isDropdownOpen && (
-                                <div className="card shadow-sm w-100 mt-1 overflow-hidden" style={{ maxHeight: '200px' }}>
-                                    {/* Search Inside Dropdown */}
-                                    <div className="p-2 border-bottom bg-light">
-                                        <input 
-                                            type="text" 
-                                            className="form-control form-control-sm" 
-                                            placeholder="Type to filter..."
-                                            autoFocus
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking input
-                                        />
-                                    </div>
-                                    
-                                    {/* Scrollable List */}
-                                    <div className="list-group list-group-flush overflow-auto" style={{maxHeight: '200px' }}>
-                                        {filteredColumns.length > 0 ? (
-                                            filteredColumns.map(col => {
-                                                const isSelected = selectedCols.includes(col.key);
-                                                return (
-                                                    <button 
-                                                        key={col.key} 
-                                                        type="button"
-                                                        className={`list-group-item list-group-item-action small d-flex justify-content-between align-items-center text-black ${isSelected ? 'bg-light' : ''}`}
-                                                        onClick={() => isSelected ? handleRemoveColumn(col.key, { stopPropagation: () => {} }) : handleSelectColumn(col.key)}
-                                                    >
-                                                        <span>{col.label}</span>
-                                                        {isSelected && <i className="bi bi-check-circle-fill text-success "></i>}
-                                                    </button>
-                                                );
-                                            })
-                                        ) : (
-                                            <div className="p-3 text-center text-muted small">No columns found</div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                            
-                            <style>{`
-                                .modal-body { position: relative; } 
-                            `}</style>
-                        </div>
-                    </div>
+                            {/* 2. Formula Type */}
+                            <div className="mb-4">
+                                <label className="fw-bold small mb-1">Formula Type *</label>
+                                <select 
+                                    className="form-select"
+                                    value={formulaType}
+                                    onChange={(e) => setFormulaType(e.target.value)}
+                                >
+                                    {FORMULA_TYPES.map(ft => (
+                                        <option key={ft.value} value={ft.value}>{ft.label}</option>
+                                    ))}
+                                </select>
+                            </div>
 
-                    <div className="modal-footer border-top-0 pt-0">
-                        <button className="btn btn-light rounded-pill" onClick={onClose}>Cancel</button>
-                        {/* UPDATED: Added class 'btn-add-column-action' for the click outside check */}
-                        <button className="btn btn-success text-white rounded-3 px-4 btn-add-column-action" onClick={handleSave}>
-                            Add Column
-                        </button>
+                            {/* 3. Select Columns (Multi-Select Dropdown) */}
+                            <div className="mb-4" ref={dropdownRef}>
+                                <label className="fw-bold small mb-1">Select Columns *</label>
+                                
+                                <div 
+                                    className="form-control d-flex flex-wrap align-items-center gap-2" 
+                                    style={{ minHeight: '42px', cursor: 'pointer', backgroundColor: '#fff' }}
+                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                >
+                                    {selectedCols.length === 0 && (
+                                        <span className="text-muted small">Search and select columns...</span>
+                                    )}
+
+                                    {selectedCols.map(key => {
+                                        const col = existingColumns.find(c => c.key === key);
+                                        return (
+                                            <span key={key} className="badge bg-success-subtle text-success border border-success-subtle rounded-pill d-flex align-items-center px-2 py-1">
+                                                {col ? col.label : key}
+                                                <i 
+                                                    className="bi bi-x ms-1 cursor-pointer" 
+                                                    style={{ fontSize: '1.1em' }}
+                                                    onClick={(e) => handleRemoveColumn(key, e)}
+                                                ></i>
+                                            </span>
+                                        );
+                                    })}
+                                    
+                                    <i className={`bi bi-chevron-${isDropdownOpen ? 'up' : 'down'} ms-auto text-muted`}></i>
+                                </div>
+
+                                {isDropdownOpen && (
+                                    <div className="card shadow-sm w-100 mt-1 overflow-hidden" style={{ maxHeight: '200px' }}>
+                                        <div className="p-2 border-bottom bg-light">
+                                            <input 
+                                                type="text" 
+                                                className="form-control form-control-sm" 
+                                                placeholder="Type to filter..."
+                                                autoFocus
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                onClick={(e) => e.stopPropagation()} 
+                                            />
+                                        </div>
+                                        
+                                        <div className="list-group list-group-flush overflow-auto" style={{maxHeight: '200px' }}>
+                                            {filteredColumns.length > 0 ? (
+                                                filteredColumns.map(col => {
+                                                    const isSelected = selectedCols.includes(col.key);
+                                                    return (
+                                                        <button 
+                                                            key={col.key} 
+                                                            type="button"
+                                                            className={`list-group-item list-group-item-action small d-flex justify-content-between align-items-center text-black ${isSelected ? 'bg-light' : ''}`}
+                                                            onClick={() => isSelected ? handleRemoveColumn(col.key, { stopPropagation: () => {} }) : handleSelectColumn(col.key)}
+                                                        >
+                                                            <span>{col.label}</span>
+                                                            {isSelected && <i className="bi bi-check-circle-fill text-success "></i>}
+                                                        </button>
+                                                    );
+                                                })
+                                            ) : (
+                                                <div className="p-3 text-center text-muted small">No columns found</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="modal-footer border-top-0 pt-0">
+                            <button className="btn btn-light rounded-pill" onClick={onClose}>Cancel</button>
+                            <button className="btn btn-success text-white rounded-3 px-4 btn-add-column-action" onClick={handleSave}>
+                                Add Column
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            {/* --- ERROR / ATTENTION MODAL --- */}
+            {showError && (
+                <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
+                    <div className="modal-dialog modal-dialog-centered modal-sm">
+                        <div className="modal-content shadow-sm border-0 rounded-4">
+                            <div className="modal-body text-center p-4">
+                                <div className="mb-3 text-warning bg-warning-subtle rounded-circle d-inline-flex align-items-center justify-content-center" style={{ width: '60px', height: '60px' }}>
+                                    <i className="bi bi-exclamation-circle text-warning fs-3"></i>
+                                </div>
+                                <h6 className="fw-bold mb-2 text-dark">Attention</h6>
+                                <p className="text-muted small mb-4">{errorMessage}</p>
+                                <button className=" btn btn-primary btn-sm rounded-6 px-3" onClick={() => setShowError(false)}>
+                                    Okay, Got it
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 

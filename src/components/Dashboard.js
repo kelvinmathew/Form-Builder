@@ -38,29 +38,35 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
   const totalPages = Math.ceil(forms.length / itemsPerPage);
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
+  // Common font styles to ensure consistency
+  const fontStyleMain = { fontSize: "14px" };
+  const fontStyleHeading = { fontSize: "16px", fontWeight: "bold" };
+
   return (
     <div 
       className="min-vh-100" 
       style={{ 
-        backgroundColor: "#F3F4F6"
+        backgroundColor: "#F3F4F6" // The grey body background
       }}
     >
 
       {/* --- HEADER SECTION --- */}
-      <div className="bg-white border-bottom sticky-top" style={{ zIndex: 100 }}>
+      <div className="bg-light border-bottom sticky-top" style={{ zIndex: 100 }}>
         <div className="container px-4 px-lg-5 py-4">
           <div className="row align-items-center g-3">
             <div className="col-12 col-md-6">
-              <h4 className="fw-bold text-dark mb-2">
+              {/* Heading updated to 16px */}
+              <h4 className="text-black fs-5 mb-2" style={fontStyleHeading}>
                 Dashboard
               </h4>
-              <p className="text-muted mb-0">Manage your forms and data collection.</p>
+              <p className="text-muted mb-0" style={fontStyleMain}>Manage your forms and data collection.</p>
             </div>
             <div className="col-12 col-md-6 d-flex flex-column flex-md-row justify-content-md-end gap-3">
               <button
                 className="btn d-flex align-items-center justify-content-center gap-1 px-3 py-2 fw-semibold shadow-sm rounded-3"
                 onClick={onCreate}
-                style={{ backgroundColor: "#4F46E5", color: "#ffffff", border: "none" }}
+                // Button text 14px
+                style={{ backgroundColor: "#4F46E5", color: "#ffffff", border: "none", ...fontStyleMain }}
               >
                 <i className="bi bi-plus-lg "></i>
                 <span>New Form</span>
@@ -78,10 +84,10 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
               style={{ width: "80px", height: "80px", backgroundColor: "#EEF2FF", color: "#4F46E5" }}>
               <i className="bi bi-inbox fs-1"></i>
             </div>
-            <h4 className="fw-bold text-dark">
+            <h4 className="text-dark" style={fontStyleHeading}>
                 No forms found
             </h4>
-            <button className="btn btn-outline-primary px-4 rounded-pill fw-medium mt-3" onClick={onCreate}>
+            <button className="btn btn-outline-primary px-4 rounded-pill fw-medium mt-3" onClick={onCreate} style={fontStyleMain}>
               Create Form
             </button>
           </div>
@@ -89,10 +95,10 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
           <div className="d-flex flex-column gap-3">
             {/* List Meta Header */}
             <div className="d-flex justify-content-between align-items-center px-2 mb-1">
-              <span className="text-uppercase fw-bold text-muted">
+              <span className="text-uppercase fw-bold text-muted" style={{ fontSize: "12px", letterSpacing: "0.5px" }}>
                 All Forms ({forms.length})
               </span>
-              <span className="text-muted small">
+              <span className="text-muted" style={{ fontSize: "12px" }}>
                 Page {currentPage} of {totalPages === 0 ? 1 : totalPages}
               </span>
             </div>
@@ -107,7 +113,7 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                   borderRadius: "16px",
                   cursor: "pointer",
                   transition: "all 0.2s ease-in-out",
-                  backgroundColor: "#fff"
+                  backgroundColor: "#FAFAFA" // Changed from #fff to #FAFAFA (Off-white)
                 }}
               >
                 <div className="card-body p-4 d-flex align-items-center">
@@ -118,19 +124,21 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                   </div>
                   <div className="flex-grow-1 overflow-hidden me-3">
                     <div className="d-flex align-items-center mb-1">
-                      <h5 className=" text-black mb-1 text-truncate">
+                      {/* Form Title updated to 16px */}
+                      <h5 className="text-black mb-0 text-truncate" style={fontStyleHeading}>
                         {form.title}
                       </h5>
-                      <span className="badge ms-2 rounded-pill fw-normal" style={{ backgroundColor: "#ECFDF5", color: "#059669" }}>Active</span>
+                      <span className="badge ms-2 rounded-pill fw-normal" style={{ backgroundColor: "#ECFDF5", color: "#059669", fontSize: "12px" }}>Active</span>
                     </div>
-                    <p className="text-muted mb-0 text-truncate">
+                    {/* Description updated to 14px */}
+                    <p className="text-muted mb-0 text-truncate" style={fontStyleMain}>
                       {form.description || "No description provided."}
                     </p>
                   </div>
                   
                   <div className="d-flex align-items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     
-                    {/* --- UPDATED EDIT BUTTON (Blue Pencil in Light Blue Square) --- */}
+                    {/* --- UPDATED EDIT BUTTON --- */}
                     <button 
                         className="btn d-flex align-items-center justify-content-center"
                         onClick={() => onEdit(form.id)} 
@@ -139,9 +147,10 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                             width: "40px", 
                             height: "40px", 
                             borderRadius: "10px", 
-                            backgroundColor: "#eff6ff", // Light Blue Background
-                            color: "#3b82f6",           // Blue Icon Color
-                            border: "none"
+                            backgroundColor: "#eff6ff", 
+                            color: "#3b82f6",           
+                            border: "none",
+                            ...fontStyleMain
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#dbeafe"}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#eff6ff"}
@@ -153,7 +162,7 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                     <button 
                         className="btn btn-light text-danger d-flex align-items-center justify-content-center" 
                         onClick={() => handleDeleteClick(form.id)} 
-                        style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#FEF2F2" }}
+                        style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#FEF2F2", ...fontStyleMain }}
                     >
                       <i className="bi bi-trash-fill"></i>
                     </button>
@@ -162,14 +171,14 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
               </div>
             ))}
 
-            {/* --- PAGINATION CONTROLS --- */}
+            {/* --- PAGINATION CONTROLS (CENTERED) --- */}
             {forms.length > 0 && (
-              <div className="d-flex justify-content-end align-items-center mt-4 gap-2">
+              <div className="d-flex justify-content-center align-items-center mt-4 gap-2"> 
                 <button
                   className="btn btn-white border shadow-sm"
                   onClick={() => paginate(currentPage - 1)}
                   disabled={currentPage === 1}
-                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center", ...fontStyleMain }}
                 >
                   <i className="bi bi-chevron-left"></i>
                 </button>
@@ -187,7 +196,8 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                       padding: 0,
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center"
+                      justifyContent: "center",
+                      ...fontStyleMain // Ensures number is 14px
                     }}
                   >
                     {i + 1}
@@ -198,7 +208,7 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                   className="btn btn-white border shadow-sm"
                   onClick={() => paginate(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center", ...fontStyleMain }}
                 >
                   <i className="bi bi-chevron-right"></i>
                 </button>
@@ -217,17 +227,17 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
             <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content border-0 shadow-lg rounded-4">
                 <div className="modal-header border-bottom-0 pb-0">
-                  <h5 className="modal-title fw-bold text-danger">
+                  <h5 className="modal-title text-danger" style={fontStyleHeading}>
                     Delete Form?
                   </h5>
                   <button type="button" className="btn-close" onClick={cancelDelete}></button>
                 </div>
                 <div className="modal-body py-4">
-                  <p className="text-muted mb-0">Are you sure? This action cannot be undone.</p>
+                  <p className="text-muted mb-0" style={fontStyleMain}>Are you sure? This action cannot be undone.</p>
                 </div>
                 <div className="modal-footer border-top-0 pt-0">
-                  <button className="btn btn-light rounded-pill px-4" onClick={cancelDelete}>Cancel</button>
-                  <button className="btn btn-danger rounded-pill px-4" onClick={confirmDelete}>Delete</button>
+                  <button className="btn btn-outline-secondary btn-sm rounded-6 px-3" onClick={cancelDelete} style={fontStyleMain}>Cancel</button>
+                  <button className="btn btn-danger btn-sm rounded-6 px-3" onClick={confirmDelete} style={fontStyleMain}>Delete</button>
                 </div>
               </div>
             </div>

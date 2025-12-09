@@ -9,22 +9,19 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     
-    // Slice the data for the current view
     const currentData = data.slice(indexOfFirstItem, indexOfLastItem);
-    
-    // Calculate total pages
     const totalPages = Math.ceil(data.length / itemsPerPage);
-
-    // Change page handler
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-    // Show 4 preview keys as before
+    // Show 4 preview keys
     const previewKeys = columnOrder.slice(0, 4);
+
+    const fontStyleText = { fontSize: "14px" };
 
     return (
         <div className="d-flex flex-column gap-3">
             
-            {/* List Meta Header (Optional: Shows Page Info) */}
+            {/* List Meta Header */}
             {data.length > 0 && (
                 <div className="d-flex justify-content-end px-2 mb-1">
                     <span className="text-muted small">
@@ -33,9 +30,7 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
                 </div>
             )}
 
-            {/* Mapped over currentData (Paginated) instead of all data */}
             {currentData.map((row, idx) => {
-                // Calculate the actual row number based on page
                 const absoluteRowNumber = indexOfFirstItem + idx + 1;
 
                 return (
@@ -47,89 +42,94 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
                         onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 20px rgba(201, 28, 28, 0.08)"; }}
                         onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(143, 34, 34, 0.04)"; }}
                     >
-                        <div className="card-body p-4">
-                            <div className="row align-items-center g-4">
-                                
-                                {/* 1. Entry Info Section (Left) */}
-                                <div className="col-12 col-md-3 d-flex flex-column justify-content-center border-end-md">
-                                    <div className="d-flex align-items-center gap-2 mb-2">
-                                        <div className="rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-1 fw-bold ">
-                                            <i className="bi bi-hash me-0"></i> {absoluteRowNumber}
-                                        </div>
-                                    </div>
-                                    <div className="d-flex align-items-center text-muted">
-                                        <i className="bi bi-clock me-1"></i>
-                                        <span>{row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'Just now'}</span>
-                                    </div>
+                        <div className="card-body p-4 d-flex align-items-center">
+                            
+                            {/* 1. LEFT: ID + Date (Stacked) */}
+                            <div className="me-5 d-flex flex-column align-items-start" style={{ minWidth: "100px" }}>
+                                <div className="rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-1 fw-bold mb-2" style={fontStyleText}>
+                                    <i className="bi bi-hash me-1"></i> {absoluteRowNumber}
                                 </div>
-
-                                {/* 2. Data Preview Section (Middle) */}
-                                <div className="col-12 col-md-7">
-                                    <div className="row g-4">
-                                        {previewKeys.map(key => {
-                                            const comp = allComponents.find(c => c.key === key);
-                                            
-                                            // Logic to get Label instead of Internal ID
-                                            let displayVal = row[key];
-
-                                            if (comp && (comp.type === 'select' || comp.type === 'radio' || comp.type === 'checkbox')) {
-                                                const options = comp.values || comp.data?.values || [];
-                                                if (options.length > 0) {
-                                                    if (Array.isArray(displayVal)) {
-                                                        displayVal = displayVal.map(val => {
-                                                            const match = options.find(opt => opt.value === val);
-                                                            return match ? match.label : val;
-                                                        }).join(", ");
-                                                    } else {
-                                                        const match = options.find(opt => opt.value === displayVal);
-                                                        if (match) displayVal = match.label;
-                                                    }
-                                                }
-                                            }
-
-                                            return (
-                                                <div key={key} className="col-6 col-lg-3">
-                                                    {/* HEADER */}
-                                                    <div className="text-black fw-bold mb-3 text-uppercase">
-                                                        {comp?.label || key}
-                                                    </div>
-                                                    {/* VALUE */}
-                                                    <div className="text-dark text-truncate">
-                                                        {displayVal ? displayVal : <span className="text-muted opacity-50">-</span>}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* 3. Action Button Section (Right) */}
-                                <div className="col-12 col-md-2 text-md-end d-flex align-items-center justify-content-md-end justify-content-start">
-                                    <button className="btn btn-light rounded-pill px-4 py-2 text-primary fw-bold border-0 d-flex align-items-center gap-2 hover-scale">
-                                        <span></span>
-                                        <i className="bi bi-pencil-square"></i>
-                                    </button>
+                                <div className="d-flex align-items-center text-muted" style={fontStyleText}>
+                                    {/* UPDATED: Calendar Icon */}
+                                    <i className="bi bi-calendar4 me-2"></i>
+                                    {/* Format Date only */}
+                                    <span>{row.createdAt ? row.createdAt.split(',')[0] : 'No Date'}</span>
                                 </div>
                             </div>
+
+                            {/* 2. MIDDLE: Data Columns (Horizontal Layout) */}
+                            <div className="flex-grow-1 d-none d-md-flex align-items-center ">
+                                <div className="row w-100 ">
+                                    {previewKeys.map(key => {
+                                        const comp = allComponents.find(c => c.key === key);
+                                        let displayVal = row[key];
+
+                                        if (comp && (comp.type === 'select' || comp.type === 'radio' || comp.type === 'checkbox')) {
+                                            const options = comp.values || comp.data?.values || [];
+                                            if (options.length > 0) {
+                                                if (Array.isArray(displayVal)) {
+                                                    displayVal = displayVal.map(val => {
+                                                        const match = options.find(opt => opt.value === val);
+                                                        return match ? match.label : val;
+                                                    }).join(", ");
+                                                } else {
+                                                    const match = options.find(opt => opt.value === displayVal);
+                                                    if (match) displayVal = match.label;
+                                                }
+                                            }
+                                        }
+
+                                        return (
+                                            <div key={key} className="col">
+                                                {/* HEADER: Uppercase, Small, Grey, Bold */}
+                                                <div className="text-black fw-bold mb-2 text-uppercase" style={{ fontSize: "11px", letterSpacing: "0.5px" }}>
+                                                    {comp?.label || key}
+                                                </div>
+                                                {/* VALUE: 14px Standard */}
+                                                <div className="text-dark text-truncate fw-medium" style={fontStyleText}>
+                                                    {displayVal ? displayVal : <span className="text-muted opacity-25">-</span>}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* 3. RIGHT: Edit Button */}
+                            <div className="ms-4">
+                                <button 
+                                    className="btn d-flex align-items-center justify-content-center"
+                                    style={{ 
+                                        width: "40px", 
+                                        height: "40px", 
+                                        borderRadius: "50%", // Circular button
+                                        backgroundColor: "#eff6ff", 
+                                        color: "#3b82f6", 
+                                        border: "none",
+                                        ...fontStyleText
+                                    }}
+                                >
+                                    <i className="bi bi-pencil-square"></i>
+                                </button>
+                            </div>
+
                         </div>
                     </div>
                 );
             })}
 
-            {/* --- PAGINATION CONTROLS --- */}
+            {/* --- PAGINATION CONTROLS (CENTERED) --- */}
             {data.length > 0 && (
-              <div className="d-flex justify-content-end align-items-center mt-4 gap-2">
-                {/* Previous Button */}
+              <div className="d-flex justify-content-center align-items-center mt-4 gap-2">
                 <button
                   className="btn btn-white border shadow-sm"
                   onClick={() => paginate(currentPage - 1)}
                   disabled={currentPage === 1}
-                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center", ...fontStyleText }}
                 >
                   <i className="bi bi-chevron-left"></i>
                 </button>
 
-                {/* Page Numbers */}
                 {Array.from({ length: totalPages }, (_, i) => (
                   <button
                     key={i + 1}
@@ -143,40 +143,36 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
                       padding: 0,
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center"
+                      justifyContent: "center",
+                      ...fontStyleText
                     }}
                   >
                     {i + 1}
                   </button>
                 ))}
 
-                {/* Next Button */}
                 <button
                   className="btn btn-white border shadow-sm"
                   onClick={() => paginate(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center", ...fontStyleText }}
                 >
                   <i className="bi bi-chevron-right"></i>
                 </button>
               </div>
             )}
 
-            {/* Empty State */}
             {data.length === 0 && (
                 <div className="text-center py-5 rounded-4 border border-dashed" style={{backgroundColor: "#f8f9fa"}}>
                     <i className="bi bi-inbox text-muted fs-1 mb-3 d-block opacity-50"></i>
-                    <h6 className="text-muted fw-bold">No entries found</h6>
-                    <p className="text-muted mb-0">Create a new entry to get started.</p>
+                    <h6 className="text-muted fw-bold" style={fontStyleText}>No entries found</h6>
+                    <p className="text-muted mb-0" style={fontStyleText}>Create a new entry to get started.</p>
                 </div>
             )}
 
             <style>{`
                 .hover-scale { transition: transform 0.2s; }
                 .hover-scale:hover { transform: scale(1.05); background-color: #eef2ff; }
-                @media (min-width: 768px) {
-                    .border-end-md { border-right: 1px solid #f0f0f0; }
-                }
             `}</style>
         </div>
     );

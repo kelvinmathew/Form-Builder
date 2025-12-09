@@ -107,30 +107,30 @@ const App = () => {
   };
 
   return (
-    <div className="app-container bg-light min-vh-100">
+    <div className=" app-container bg-light min-vh-100">
       
       {/* Navbar */}
       <nav 
-        className="navbar sticky-top bg-white border-bottom mb-4" 
+        className=" navbar sticky-top bg-white border-bottom mb-4" 
         style={{ zIndex: 1000, padding: "0.75rem 0" }}
       >
         <div className=" px-4 px-lg-5">
           <span 
-            className="navbar-brand d-flex align-items-center gap-2 fw-bold mb-0 text-dark" 
+            className=" fs-4 navbar-brand d-flex align-items-center gap-2 fw-bold mb-0 text-dark" 
             style={{ cursor: "pointer" }} 
             onClick={() => setView("dashboard")}
           >
             {/* Modern Logo Mark */}
             <div 
-              className="d-flex align-items-center justify-content-center rounded shadow-sm" 
+              className=" d-flex align-items-center justify-content-center rounded shadow-sm" 
               style={{ 
-                width: "38px", 
+                width: "39px", 
                 height: "41px", 
                 background: "linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)", // Indigo gradient
                 color: "white" 
               }}
             >
-              <i className="bi bi-grid-3x3-gap-fill"></i>
+              <i className=" bi bi-grid-3x3-gap-fill"></i>
             </div>
             
             FormManager

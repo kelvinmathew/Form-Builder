@@ -86,14 +86,18 @@ const DynamicTable = ({
         if (onLayoutChange) onLayoutChange({ headers: localHeaders, footers: newFooters });
     };
 
+    // --- TYPOGRAPHY STYLES ---
+    const fontText = { fontSize: "14px" };
+    const fontHeading = { fontSize: "16px", fontWeight: "bold" };
+
     const getHeaderStyle = (isDragging = false) => ({
         backgroundColor: isReportMode ? themeColor : (isDragging ? "#e9ecef" : "#F9FAFB"),
         color: isReportMode ? "white" : "#545757",
-        border: isReportMode ? "1px solid white" : "1px solid #dee2e6",
+        border: isReportMode ? "none" : "1px solid #dee2e6",
         cursor: "move", 
         userSelect: "none",
         whiteSpace: "nowrap",
-        fontSize: "15px" // INCREASED Header Font Size
+        ...fontText // 14px for table headers
     });
 
     const handleCellSave = (rowId, key, newValue) => {
@@ -120,9 +124,9 @@ const DynamicTable = ({
 
     const renderDetailLine = (label, value) => (
         <div className="row mb-2 align-items-end" key={label} style={{ pointerEvents: 'none' }}> 
-            <div className="col-5 text-muted">{label}:</div>
+            <div className="col-5 text-muted" style={fontText}>{label}:</div>
             <div className="col-7 border-bottom position-relative" style={{ minHeight: "24px", borderColor: "#dee2e6" }}>
-                {value && <span className="fw-bold text-dark position-absolute bottom-0 start-0 ps-2">{value}</span>}
+                {value && <span className="fw-bold text-dark position-absolute bottom-0 start-0 ps-2" style={fontText}>{value}</span>}
             </div>
         </div>
     );
@@ -141,7 +145,7 @@ const DynamicTable = ({
     };
 
     return (
-        <div className={`bg-white ${!isReportMode ? "card border-0 shadow-sm rounded-4 overflow-hidden" : ""}`} onClick={() => setColumnToDelete(null)}>
+        <div className={`bg-transparent`} onClick={() => setColumnToDelete(null)}>
             
             {/* --- DELETE CONFIRMATION MODAL --- */}
             {columnToDelete && (
@@ -155,8 +159,8 @@ const DynamicTable = ({
                                 <h6 className="fw-bold mb-2">Delete Column?</h6>
                                 <p className="text-muted small mb-4">Are you sure you want to remove this column? This action cannot be undone.</p>
                                 <div className="d-flex gap-2 justify-content-center">
-                                    <button type="button" className="btn btn-light rounded-pill px-4 fw-bold" onClick={(e) => { e.stopPropagation(); setColumnToDelete(null); }}>Cancel</button>
-                                    <button type="button" className="btn btn-danger rounded-pill px-4 fw-bold" onClick={(e) => { e.stopPropagation(); confirmDelete(); }}>Delete</button>
+                                    <button type="button" className="btn btn-outline-secondary btn-sm rounded-6 px-3" onClick={(e) => { e.stopPropagation(); setColumnToDelete(null); }}>Cancel</button>
+                                    <button type="button" className="btn btn-danger btn-sm rounded-6 px-3" onClick={(e) => { e.stopPropagation(); confirmDelete(); }}>Delete</button>
                                 </div>
                             </div>
                         </div>
@@ -164,96 +168,116 @@ const DynamicTable = ({
                 </div>
             )}
 
-            {/* --- REPORT MODE HEADER --- */}
+            {/* --- REPORT MODE HEADER CONTROLS --- */}
             {isReportMode && (
-                <div className="mb-4">
-                    <div className="d-flex justify-content-between align-items-center pt-2 mb-4 px-3">
-                        <div className="d-flex gap-2 align-items-center">
-                            <button className="btn btn-sm btn-success text-white rounded-3" onClick={onExportExcel}><i className="bi bi-file-earmark-excel me-2 "></i>Export Excel</button>
-                            <button className="btn btn-sm btn-danger text-white rounded-3" onClick={onExportPDF}><i className="bi bi-file-earmark-pdf me-2"></i>Export PDF</button>
-                            
-                            {/* --- HIDDEN COLOR INPUT WITH ICON BUTTON --- */}
-                            <div className="ms-2">
-                                <button 
-                                    className="btn btn-sm btn-light border text-muted" 
-                                    onClick={() => colorInputRef.current.click()}
-                                    title="Change Theme Color"
-                                    style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                >
-                                    <i className="bi bi-palette-fill"></i>
-                                </button>
-                                <input 
-                                    ref={colorInputRef}
-                                    type="color" 
-                                    value={themeColor} 
-                                    onChange={(e) => onThemeColorChange(e.target.value)}
-                                    style={{ display: 'none' }} 
-                                />
-                            </div>
+                <div className="d-flex justify-content-between align-items-center mb-4 position-relative">
+                    {/* LEFT SIDE: Export Buttons */}
+                    <div className="d-flex gap-2 align-items-center">
+                        {/* Green Excel Button */}
+                        <button className="btn btn-success text-white rounded-3 border-0" onClick={onExportExcel} style={{backgroundColor: "#107c41", ...fontText}}>
+                            <i className="bi bi-file-earmark-excel me-2"></i>Export Excel
+                        </button>
+                        {/* Red PDF Button */}
+                        <button className="btn btn-danger text-white rounded-3 border-0" onClick={onExportPDF} style={{backgroundColor: "#dc2626", ...fontText}}>
+                            <i className="bi bi-file-earmark-pdf me-2"></i>Export PDF
+                        </button>
+                        
+                        {/* Theme Color Button */}
+                        <div className="ms-2">
+                            <button 
+                                className="btn btn-light border text-muted" 
+                                onClick={() => colorInputRef.current.click()}
+                                title="Change Theme Color"
+                                style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: "6px" }}
+                            >
+                                <i className="bi bi-palette-fill"></i>
+                            </button>
+                            <input 
+                                ref={colorInputRef}
+                                type="color" 
+                                value={themeColor} 
+                                onChange={(e) => onThemeColorChange(e.target.value)}
+                                style={{ display: 'none' }} 
+                            />
                         </div>
-
-                        {/* Title automatically uses SF Pro Display via CSS h4 rule */}
-                        <h4 className="fw-bold text-dark m-0 position-absolute start-50 translate-middle-x">{formTitle || "Report"}</h4>
-                        <button className="btn btn-sm btn-outline-primary text-nowrap rounded-3" onClick={onAddColumn}><i className="bi bi-plus me-1"></i> Add Column</button>
                     </div>
 
-                    {/* --- PROJECT DETAILS HEADER --- */}
+                    {/* CENTER: Title (Position Absolute to ensure perfect centering) */}
+                    <span className="fw-bold text-dark position-absolute start-50 translate-middle-x" style={fontHeading}>
+                        {formTitle || "Report"}
+                    </span>
+
+                    {/* RIGHT SIDE: Add Column Button */}
+                    <div>
+                        <button className="btn btn-outline-primary text-nowrap rounded-3" onClick={onAddColumn} style={fontText}>
+                            <i className="bi bi-plus me-1"></i> Add Column
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* --- 1. PROJECT DETAILS BOX (Curved White Box) --- */}
+            {isReportMode && (
+                <div className="card border shadow-sm mb-4 rounded-3 overflow-hidden">
+                    {/* Header Strip */}
                     <div 
-                        className="text-white fw-bold py-1 px-3 mb-3" 
+                        className="text-white fw-bold py-2 px-4" 
                         style={{ 
-                            backgroundColor: themeColor
+                            backgroundColor: themeColor,
+                            ...fontHeading // 16px
                         }}
                     >
                         Project Details
                     </div>
                     
-                    <div className="row mb-4 px-2" style={{ fontWeight: "800" }}>
-                        {localHeaders.map((item, index) => (
-                            <div 
-                                className="col-md-6 draggable-header-item" 
-                                key={item.id}
-                                draggable={true}
-                                onDragStart={(e) => handleHeaderDragStart(e, index)}
-                                onDragOver={(e) => handleHeaderDragOver(e, index)}
-                                onDrop={(e) => handleHeaderDrop(e, index)}
-                                style={{
-                                    cursor: 'move',
-                                    opacity: draggedHeader === index ? 0.4 : 1,
-                                    transition: 'all 0.2s ease',
-                                    border: draggedHeader === index ? `2px dashed ${themeColor}` : '2px solid transparent',
-                                    borderRadius: '4px'
-                                }}
-                                title="Drag to reorder"
-                            >
-                                {renderDetailLine(item.label, item.value)}
-                            </div>
-                        ))}
+                    {/* Details Body */}
+                    <div className="p-4 bg-white">
+                        <div className="row g-4">
+                            {localHeaders.map((item, index) => (
+                                <div 
+                                    className="col-md-6 draggable-header-item" 
+                                    key={item.id}
+                                    draggable={true}
+                                    onDragStart={(e) => handleHeaderDragStart(e, index)}
+                                    onDragOver={(e) => handleHeaderDragOver(e, index)}
+                                    onDrop={(e) => handleHeaderDrop(e, index)}
+                                    style={{
+                                        cursor: 'move',
+                                        opacity: draggedHeader === index ? 0.4 : 1,
+                                        transition: 'all 0.2s ease',
+                                        border: draggedHeader === index ? `2px dashed ${themeColor}` : '2px solid transparent',
+                                        borderRadius: '4px'
+                                    }}
+                                    title="Drag to reorder"
+                                >
+                                    {renderDetailLine(item.label, item.value)}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* --- TABLE HEADER (Standard Mode) --- */}
-            {!isReportMode && (
-                <div className="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
-                    {/* Title automatically uses SF Pro Display via CSS h5 rule */}
-                    <h5 className="fw-bold mb-0">{title}</h5>
-                    <div>
-                        <button className="btn btn-sm btn-outline-primary me-3" onClick={onAddColumn}><i className="bi bi-plus-circle me-1"></i> Add Column</button>
-                        <small className="text-muted text-end d-inline-block">Drag headers to move columns.</small>
+            {/* --- 2. DATA TABLE BOX (Separate Curved White Box) --- */}
+            <div className="card border shadow-sm rounded-3 overflow-hidden">
+                {!isReportMode && (
+                    <div className="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+                        <h5 className="fw-bold mb-0" style={fontHeading}>{title}</h5>
+                        <div>
+                            <button className="btn btn-sm btn-outline-primary me-3" onClick={onAddColumn} style={fontText}><i className="bi bi-plus-circle me-1"></i> Add Column</button>
+                            <small className="text-muted text-end d-inline-block">Drag headers to move columns.</small>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* --- TABLE BODY --- */}
-            <div className={isReportMode ? "" : "table-responsive"}>
-                <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
-                <div className="hide-scrollbar" style={{ overflowX: 'auto', width: '100%' }}>
-                    <table className={`table table-bordered align-middle mb-0 ${isReportMode ? "table-sm w-100" : ""}`} style={{ minWidth: '100%' }}>
+                <div className="table-responsive hide-scrollbar">
+                    <table className={`table mb-0 ${isReportMode ? "table-sm w-100" : ""}`} style={{ minWidth: '100%' }}>
                         <thead>
-                            <tr>
+                            {/* Report Mode: Table Headers have colored background */}
+                            <tr style={{ backgroundColor: isReportMode ? themeColor : "transparent" }}>
                                 {/* CONDITIONAL DN HEADER */}
                                 {showDnColumn && (
-                                    <th className="py-3 px-2 text-center" style={{ ...getHeaderStyle(), cursor: 'default', minWidth: '63px' }}>{dnLabel}</th>
+                                    <th className="py-3 px-3 text-center text-white" style={{ ...getHeaderStyle(), cursor: 'default', minWidth: '63px' }}>{dnLabel}</th>
                                 )}
                                 
                                 {columnOrder.map((key) => {
@@ -262,7 +286,7 @@ const DynamicTable = ({
                                     return (
                                         <th
                                             key={key}
-                                            className="py-2 px-1 text-center position-relative group-hover"
+                                            className="py-3 px-3 text-center position-relative group-hover text-white"
                                             draggable={true}
                                             onDragStart={() => setDraggedColumn(key)}
                                             onDragOver={(e) => e.preventDefault()}
@@ -273,14 +297,14 @@ const DynamicTable = ({
                                                 <span>{getColumnLabel(key, comp)}</span>
                                                 {isCustom && (
                                                     <div 
-                                                        className="d-inline-flex align-items-center justify-content-center ms-1 text-danger bg-danger-subtle rounded-circle "
-                                                        style={{width: '19px', height: '19px', cursor: 'pointer', transition: 'all 0.2s'}}
+                                                        className="d-inline-flex align-items-center justify-content-center ms-1 text-danger bg-white rounded-circle "
+                                                        style={{width: '18px', height: '18px', cursor: 'pointer', transition: 'all 0.2s'}}
                                                         onClick={(e) => { e.stopPropagation(); setColumnToDelete(key); }} 
                                                     >
-                                                        <i className="bi bi-trash3" style={{fontSize: '0.73rem'}}></i>
+                                                        <i className="bi bi-trash3" style={{fontSize: '0.7rem'}}></i>
                                                     </div>
                                                 )}
-                                                {!isReportMode && <i className="bi bi-grip-vertical text-muted ms-1 opacity-50"></i>}
+                                                {!isReportMode && <i className="bi bi-grip-vertical text-white ms-1 opacity-50"></i>}
                                             </div>
                                         </th>
                                     );
@@ -288,7 +312,7 @@ const DynamicTable = ({
                                 
                                 {/* CONDITIONAL REMARKS HEADER */}
                                 {showRemarksColumn && (
-                                    <th className="py-2 px-1 text-center" style={{ ...getHeaderStyle(), cursor: 'default', minWidth: '100px' }}>Remarks</th>
+                                    <th className="py-3 px-3 text-center text-white" style={{ ...getHeaderStyle(), cursor: 'default', minWidth: '100px' }}>Remarks</th>
                                 )}
                                 
                                 {!isReportMode && <th className="text-center" style={{ ...getHeaderStyle(), cursor: 'default', width: "80px" }}>Actions</th>}
@@ -296,13 +320,10 @@ const DynamicTable = ({
                         </thead>
                         <tbody className="bg-white">
                             {data.map((row, idx) => (
-                                <tr key={row._rowId || idx}>
+                                <tr key={row._rowId || idx} style={{borderBottom: "1px solid #f0f0f0"}}>
                                     {/* CONDITIONAL DN CELL */}
                                     {showDnColumn && (
-                                        <td 
-                                            className="px-3 py-3 text-center fw-bold"
-                                            style={{ fontSize: "15px" }} // INCREASED FONT
-                                        >
+                                        <td className="px-3 py-3 text-center fw-bold" style={fontText}>
                                             {row[dnKey] || "-"}
                                         </td>
                                     )}
@@ -341,16 +362,16 @@ const DynamicTable = ({
                                         return (
                                             <td 
                                                 key={key} 
-                                                className={`px-3 py-3 text-center ${isEditable ? "cursor-pointer bg-light" : ""} ${isCalculated ? "bg-light-subtle fw-bold text-primary" : ""}`}
+                                                className={`px-3 py-3 text-center ${isEditable ? "cursor-pointer" : ""} ${isCalculated ? "bg-light-subtle fw-bold text-primary" : ""}`}
                                                 onClick={() => { if (isEditable && !isEditing) setEditingCell({ rowId: row._rowId, colKey: key }); }}
-                                                style={{ whiteSpace: "nowrap", fontSize: "15px" }} // --- INCREASED FONT SIZE HERE (15px) ---
+                                                style={{ whiteSpace: "nowrap", ...fontText }} 
                                             >
                                                 {isEditing ? (
                                                     <input 
                                                         autoFocus type="text" className="form-control text-center p-0" defaultValue={row[key] || ""}
                                                         onBlur={(e) => handleCellSave(row._rowId, key, e.target.value)}
                                                         onKeyDown={(e) => { if (e.key === 'Enter') handleCellSave(row._rowId, key, e.currentTarget.value); }}
-                                                        style={{minWidth: "60px", fontSize: "15px", height: "30px"}} // Match input size to cell
+                                                        style={{minWidth: "60px", fontSize: "14px", height: "24px"}} 
                                                     />
                                                 ) : (
                                                     formatDisplayValue(displayValue)
@@ -360,7 +381,7 @@ const DynamicTable = ({
                                     })}
                                     
                                     {showRemarksColumn && (
-                                        <td className="px-3 py-3 text-center" style={{ whiteSpace: "nowrap", fontSize: "15px" }}>{row[remarksKey] || "-"}</td>
+                                        <td className="px-3 py-3 text-center" style={{ whiteSpace: "nowrap", ...fontText }}>{row[remarksKey] || "-"}</td>
                                     )}
 
                                     {!isReportMode && <td className="text-center"><button className="btn btn-sm text-danger" onClick={() => onDeleteRow(row._rowId)}><i className="bi bi-trash3-fill"></i></button></td>}
@@ -373,7 +394,7 @@ const DynamicTable = ({
 
             {/* --- FOOTER SECTION --- */}
             {isReportMode && (
-                <div className="mt-5 pt-4 pb-4 px-2 d-flex flex-column gap-4"> 
+                <div className="mt-4 pb-4 px-2 d-flex flex-column gap-4"> 
                     {localFooters.map((footer, index) => {
                         const isSignature = footer.type === 'image';
                         
@@ -411,7 +432,7 @@ const DynamicTable = ({
                                             style={{ height: '50px', maxWidth: '100%', objectFit: 'contain', position: 'absolute', bottom: '5px', left: '10px' }} 
                                         />
                                     ) : (
-                                        <span className="fw-bold">{footer.value}</span>
+                                        <span className="fw-bold" style={fontText}>{footer.value}</span>
                                     )}
                                 </div>
                             </div>
