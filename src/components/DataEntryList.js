@@ -27,7 +27,7 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
             {/* List Meta Header (Optional: Shows Page Info) */}
             {data.length > 0 && (
                 <div className="d-flex justify-content-end px-2 mb-1">
-                    <span className="text-muted" style={{ fontSize: "12px" }}>
+                    <span className="text-muted small">
                         Page {currentPage} of {totalPages}
                     </span>
                 </div>
@@ -53,12 +53,11 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
                                 {/* 1. Entry Info Section (Left) */}
                                 <div className="col-12 col-md-3 d-flex flex-column justify-content-center border-end-md">
                                     <div className="d-flex align-items-center gap-2 mb-2">
-                                        <div className="rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-1 fw-bold " style={{ fontSize: "14px" }}>
-                                            {/* Updated to show absolute row number (e.g. 21, 22) */}
+                                        <div className="rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-1 fw-bold ">
                                             <i className="bi bi-hash me-0"></i> {absoluteRowNumber}
                                         </div>
                                     </div>
-                                    <div className="d-flex align-items-center text-muted" style={{ fontSize: "14px" }}>
+                                    <div className="d-flex align-items-center text-muted">
                                         <i className="bi bi-clock me-1"></i>
                                         <span>{row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : 'Just now'}</span>
                                     </div>
@@ -90,12 +89,12 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
 
                                             return (
                                                 <div key={key} className="col-6 col-lg-3">
-                                                    {/* HEADER: 16px (14px + 2px) */}
-                                                    <div className="text-black fw-bold mb-3 text-uppercase" style={{ fontSize: "12.3px", letterSpacing: "0.0px" }}>
+                                                    {/* HEADER */}
+                                                    <div className="text-black fw-bold mb-3 text-uppercase">
                                                         {comp?.label || key}
                                                     </div>
-                                                    {/* VALUE: 14px */}
-                                                    <div className="text-dark text-truncate" style={{ fontSize: "13.5px" }}>
+                                                    {/* VALUE */}
+                                                    <div className="text-dark text-truncate">
                                                         {displayVal ? displayVal : <span className="text-muted opacity-50">-</span>}
                                                     </div>
                                                 </div>
@@ -106,7 +105,7 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
 
                                 {/* 3. Action Button Section (Right) */}
                                 <div className="col-12 col-md-2 text-md-end d-flex align-items-center justify-content-md-end justify-content-start">
-                                    <button className="btn btn-light rounded-pill px-4 py-2 text-primary fw-bold border-0 d-flex align-items-center gap-2 hover-scale" style={{ fontSize: "14px" }}>
+                                    <button className="btn btn-light rounded-pill px-4 py-2 text-primary fw-bold border-0 d-flex align-items-center gap-2 hover-scale">
                                         <span></span>
                                         <i className="bi bi-pencil-square"></i>
                                     </button>
@@ -125,7 +124,7 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
                   className="btn btn-white border shadow-sm"
                   onClick={() => paginate(currentPage - 1)}
                   disabled={currentPage === 1}
-                  style={{ borderRadius: "8px", fontSize: "14px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
                   <i className="bi bi-chevron-left"></i>
                 </button>
@@ -138,7 +137,6 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
                     className={`btn shadow-sm fw-semibold ${currentPage === i + 1 ? 'text-white' : 'text-dark bg-white border'}`}
                     style={{
                       borderRadius: "8px",
-                      fontSize: "14px",
                       backgroundColor: currentPage === i + 1 ? "#4F46E5" : "#fff",
                       width: "35px",
                       height: "35px",
@@ -157,7 +155,7 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
                   className="btn btn-white border shadow-sm"
                   onClick={() => paginate(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  style={{ borderRadius: "8px", fontSize: "14px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
                   <i className="bi bi-chevron-right"></i>
                 </button>
@@ -168,8 +166,8 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
             {data.length === 0 && (
                 <div className="text-center py-5 rounded-4 border border-dashed" style={{backgroundColor: "#f8f9fa"}}>
                     <i className="bi bi-inbox text-muted fs-1 mb-3 d-block opacity-50"></i>
-                    <h6 className="text-muted fw-bold" style={{ fontSize: "16px" }}>No entries found</h6>
-                    <p className="text-muted mb-0" style={{ fontSize: "14px" }}>Create a new entry to get started.</p>
+                    <h6 className="text-muted fw-bold">No entries found</h6>
+                    <p className="text-muted mb-0">Create a new entry to get started.</p>
                 </div>
             )}
 

@@ -7,8 +7,6 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
 
   // --- PAGINATION STATE ---
   const [currentPage, setCurrentPage] = useState(1);
-  
-  // UPDATED: Set to 20 items per page as requested
   const itemsPerPage = 20; 
 
   // Function to trigger the modal opening
@@ -33,38 +31,36 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
   };
 
   // --- PAGINATION LOGIC ---
-  // 1. Sort forms by newest first
   const sortedForms = [...forms].reverse();
-
-  // 2. Calculate indices
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-
-  // 3. Get current items for this page
   const currentForms = sortedForms.slice(indexOfFirstItem, indexOfLastItem);
-
-  // 4. Calculate total pages
   const totalPages = Math.ceil(forms.length / itemsPerPage);
-
-  // 5. Change page handler
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   return (
-    <div className="min-vh-100" style={{ backgroundColor: "#F3F4F6", fontFamily: "'Inter', sans-serif", fontSize: "14px" }}>
+    <div 
+      className="min-vh-100" 
+      style={{ 
+        backgroundColor: "#F3F4F6"
+      }}
+    >
 
       {/* --- HEADER SECTION --- */}
       <div className="bg-white border-bottom sticky-top" style={{ zIndex: 100 }}>
         <div className="container px-4 px-lg-5 py-4">
           <div className="row align-items-center g-3">
             <div className="col-12 col-md-6">
-              <h4 className="fw-bold text-dark mb-2" style={{ letterSpacing: "0.2px", fontSize: "16px" }}>Dashboard</h4>
-              <p className="text-muted mb-0" style={{ fontSize: "14px" }}>Manage your forms and data collection.</p>
+              <h4 className="fw-bold text-dark mb-2">
+                Dashboard
+              </h4>
+              <p className="text-muted mb-0">Manage your forms and data collection.</p>
             </div>
             <div className="col-12 col-md-6 d-flex flex-column flex-md-row justify-content-md-end gap-3">
               <button
-                className="btn d-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold shadow-sm rounded-3"
+                className="btn d-flex align-items-center justify-content-center gap-1 px-3 py-2 fw-semibold shadow-sm rounded-3"
                 onClick={onCreate}
-                style={{ backgroundColor: "#4F46E5", color: "#ffffff", fontSize: "14px", border: "none" }}
+                style={{ backgroundColor: "#4F46E5", color: "#ffffff", border: "none" }}
               >
                 <i className="bi bi-plus-lg "></i>
                 <span>New Form</span>
@@ -82,8 +78,10 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
               style={{ width: "80px", height: "80px", backgroundColor: "#EEF2FF", color: "#4F46E5" }}>
               <i className="bi bi-inbox fs-1"></i>
             </div>
-            <h4 className="fw-bold text-dark" style={{ fontSize: "14px" }}>No forms found</h4>
-            <button className="btn btn-outline-primary px-4 rounded-pill fw-medium mt-3" onClick={onCreate} style={{ fontSize: "14px" }}>
+            <h4 className="fw-bold text-dark">
+                No forms found
+            </h4>
+            <button className="btn btn-outline-primary px-4 rounded-pill fw-medium mt-3" onClick={onCreate}>
               Create Form
             </button>
           </div>
@@ -91,15 +89,15 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
           <div className="d-flex flex-column gap-3">
             {/* List Meta Header */}
             <div className="d-flex justify-content-between align-items-center px-2 mb-1">
-              <span className="text-uppercase fw-bold text-muted" style={{ fontSize: "14px", letterSpacing: "1px" }}>
+              <span className="text-uppercase fw-bold text-muted">
                 All Forms ({forms.length})
               </span>
-              <span className="text-muted" style={{ fontSize: "12px" }}>
+              <span className="text-muted small">
                 Page {currentPage} of {totalPages === 0 ? 1 : totalPages}
               </span>
             </div>
 
-            {/* Render Paginated Forms (Up to 20) */}
+            {/* Render Paginated Forms */}
             {currentForms.map((form) => (
               <div
                 key={form.id}
@@ -120,19 +118,44 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                   </div>
                   <div className="flex-grow-1 overflow-hidden me-3">
                     <div className="d-flex align-items-center mb-1">
-                      <h5 className="fw-bold text-dark mb-0 text-truncate" style={{ fontSize: "14px" }}>{form.title}</h5>
-                      <span className="badge ms-2 rounded-pill fw-normal" style={{ backgroundColor: "#ECFDF5", color: "#059669", fontSize: "14px" }}>Active</span>
+                      <h5 className=" text-black mb-1 text-truncate">
+                        {form.title}
+                      </h5>
+                      <span className="badge ms-2 rounded-pill fw-normal" style={{ backgroundColor: "#ECFDF5", color: "#059669" }}>Active</span>
                     </div>
-                    <p className="text-muted mb-0 text-truncate" style={{ fontSize: "14px" }}>
+                    <p className="text-muted mb-0 text-truncate">
                       {form.description || "No description provided."}
                     </p>
                   </div>
+                  
                   <div className="d-flex align-items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button className="btn btn-light text-primary" onClick={() => onEdit(form.id)} style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#EEF2FF" }}>
-                      <i className="bi bi-pencil-fill" style={{ fontSize: "14px" }}></i>
+                    
+                    {/* --- UPDATED EDIT BUTTON (Blue Pencil in Light Blue Square) --- */}
+                    <button 
+                        className="btn d-flex align-items-center justify-content-center"
+                        onClick={() => onEdit(form.id)} 
+                        title="Edit Form"
+                        style={{ 
+                            width: "40px", 
+                            height: "40px", 
+                            borderRadius: "10px", 
+                            backgroundColor: "#eff6ff", // Light Blue Background
+                            color: "#3b82f6",           // Blue Icon Color
+                            border: "none"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#dbeafe"}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#eff6ff"}
+                    >
+                      <i className="bi bi-pencil-square" style={{fontSize: "18px"}}></i>
                     </button>
-                    <button className="btn btn-light text-danger" onClick={() => handleDeleteClick(form.id)} style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#FEF2F2" }}>
-                      <i className="bi bi-trash-fill" style={{ fontSize: "14px" }}></i>
+
+                    {/* Delete Button */}
+                    <button 
+                        className="btn btn-light text-danger d-flex align-items-center justify-content-center" 
+                        onClick={() => handleDeleteClick(form.id)} 
+                        style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#FEF2F2" }}
+                    >
+                      <i className="bi bi-trash-fill"></i>
                     </button>
                   </div>
                 </div>
@@ -140,21 +163,17 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
             ))}
 
             {/* --- PAGINATION CONTROLS --- */}
-            {/* Logic: Show pagination bar if there is at least 1 form, even if it's just Page 1 */}
             {forms.length > 0 && (
               <div className="d-flex justify-content-end align-items-center mt-4 gap-2">
-                
-                {/* Previous Button */}
                 <button
                   className="btn btn-white border shadow-sm"
                   onClick={() => paginate(currentPage - 1)}
                   disabled={currentPage === 1}
-                  style={{ borderRadius: "8px", fontSize: "14px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
                   <i className="bi bi-chevron-left"></i>
                 </button>
 
-                {/* Page Numbers */}
                 {Array.from({ length: totalPages }, (_, i) => (
                   <button
                     key={i + 1}
@@ -162,7 +181,6 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                     className={`btn shadow-sm fw-semibold ${currentPage === i + 1 ? 'text-white' : 'text-dark bg-white border'}`}
                     style={{
                       borderRadius: "8px",
-                      fontSize: "14px",
                       backgroundColor: currentPage === i + 1 ? "#4F46E5" : "#fff",
                       width: "35px",
                       height: "35px",
@@ -176,12 +194,11 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                   </button>
                 ))}
 
-                {/* Next Button */}
                 <button
                   className="btn btn-white border shadow-sm"
                   onClick={() => paginate(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  style={{ borderRadius: "8px", fontSize: "14px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
                   <i className="bi bi-chevron-right"></i>
                 </button>
@@ -200,15 +217,17 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
             <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content border-0 shadow-lg rounded-4">
                 <div className="modal-header border-bottom-0 pb-0">
-                  <h5 className="modal-title fw-bold text-danger" style={{ fontSize: "14px" }}>Delete Form?</h5>
+                  <h5 className="modal-title fw-bold text-danger">
+                    Delete Form?
+                  </h5>
                   <button type="button" className="btn-close" onClick={cancelDelete}></button>
                 </div>
                 <div className="modal-body py-4">
-                  <p className="text-muted mb-0" style={{ fontSize: "14px" }}>Are you sure? This action cannot be undone.</p>
+                  <p className="text-muted mb-0">Are you sure? This action cannot be undone.</p>
                 </div>
                 <div className="modal-footer border-top-0 pt-0">
-                  <button className="btn btn-light rounded-pill px-4" onClick={cancelDelete} style={{ fontSize: "14px" }}>Cancel</button>
-                  <button className="btn btn-danger rounded-pill px-4" onClick={confirmDelete} style={{ fontSize: "14px" }}>Delete</button>
+                  <button className="btn btn-light rounded-pill px-4" onClick={cancelDelete}>Cancel</button>
+                  <button className="btn btn-danger rounded-pill px-4" onClick={confirmDelete}>Delete</button>
                 </div>
               </div>
             </div>

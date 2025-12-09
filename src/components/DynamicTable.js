@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // 1. Added useRef
+import React, { useState, useEffect, useRef } from 'react'; 
 import { calculateCellValue } from '../utils/formHelpers';
 
 const DynamicTable = ({ 
@@ -21,7 +21,6 @@ const DynamicTable = ({
     onExportExcel,
     onExportPDF,
     onLayoutChange,
-    // --- UPDATED: Receive Color Props from Parent ---
     themeColor, 
     onThemeColorChange
 }) => {
@@ -40,9 +39,6 @@ const DynamicTable = ({
     // --- Modal State ---
     const [columnToDelete, setColumnToDelete] = useState(null);
 
-    // --- REMOVED: Local state for color removed ---
-    // const [themeColor, setThemeColor] = useState("#00B050");
-    
     // 2. Create a Ref to trigger the hidden color input
     const colorInputRef = useRef(null);
 
@@ -93,11 +89,11 @@ const DynamicTable = ({
     const getHeaderStyle = (isDragging = false) => ({
         backgroundColor: isReportMode ? themeColor : (isDragging ? "#e9ecef" : "#F9FAFB"),
         color: isReportMode ? "white" : "#545757",
-        fontSize: "0.8rem",
         border: isReportMode ? "1px solid white" : "1px solid #dee2e6",
         cursor: "move", 
         userSelect: "none",
-        whiteSpace: "nowrap"
+        whiteSpace: "nowrap",
+        fontSize: "15px" // INCREASED Header Font Size
     });
 
     const handleCellSave = (rowId, key, newValue) => {
@@ -126,7 +122,7 @@ const DynamicTable = ({
         <div className="row mb-2 align-items-end" key={label} style={{ pointerEvents: 'none' }}> 
             <div className="col-5 text-muted">{label}:</div>
             <div className="col-7 border-bottom position-relative" style={{ minHeight: "24px", borderColor: "#dee2e6" }}>
-                {value && <span className="fw-bold text-dark position-absolute bottom-0 start-0 ps-2" style={{fontSize: '1rem'}}>{value}</span>}
+                {value && <span className="fw-bold text-dark position-absolute bottom-0 start-0 ps-2">{value}</span>}
             </div>
         </div>
     );
@@ -176,7 +172,7 @@ const DynamicTable = ({
                             <button className="btn btn-sm btn-success text-white rounded-3" onClick={onExportExcel}><i className="bi bi-file-earmark-excel me-2 "></i>Export Excel</button>
                             <button className="btn btn-sm btn-danger text-white rounded-3" onClick={onExportPDF}><i className="bi bi-file-earmark-pdf me-2"></i>Export PDF</button>
                             
-                            {/* --- UPDATED: HIDDEN COLOR INPUT WITH ICON BUTTON --- */}
+                            {/* --- HIDDEN COLOR INPUT WITH ICON BUTTON --- */}
                             <div className="ms-2">
                                 <button 
                                     className="btn btn-sm btn-light border text-muted" 
@@ -189,21 +185,29 @@ const DynamicTable = ({
                                 <input 
                                     ref={colorInputRef}
                                     type="color" 
-                                    value={themeColor} // Using Prop
-                                    onChange={(e) => onThemeColorChange(e.target.value)} // Using Prop Handler
-                                    style={{ display: 'none' }} // This hides the actual input
+                                    value={themeColor} 
+                                    onChange={(e) => onThemeColorChange(e.target.value)}
+                                    style={{ display: 'none' }} 
                                 />
                             </div>
                         </div>
 
+                        {/* Title automatically uses SF Pro Display via CSS h4 rule */}
                         <h4 className="fw-bold text-dark m-0 position-absolute start-50 translate-middle-x">{formTitle || "Report"}</h4>
-                        <button className="btn btn-sm btn-outline-primary text-nowrap rounded-3" onClick={onAddColumn}><i className="bi bi-plus-circle me-1"></i> Add Column</button>
+                        <button className="btn btn-sm btn-outline-primary text-nowrap rounded-3" onClick={onAddColumn}><i className="bi bi-plus me-1"></i> Add Column</button>
                     </div>
 
                     {/* --- PROJECT DETAILS HEADER --- */}
-                    <div className="text-white fw-bold py-1 px-3 mb-3" style={{ backgroundColor: themeColor }}>Project Details</div>
+                    <div 
+                        className="text-white fw-bold py-1 px-3 mb-3" 
+                        style={{ 
+                            backgroundColor: themeColor
+                        }}
+                    >
+                        Project Details
+                    </div>
                     
-                    <div className="row mb-4 px-2" style={{ fontSize: "1.0rem", fontWeight: "800" }}>
+                    <div className="row mb-4 px-2" style={{ fontWeight: "800" }}>
                         {localHeaders.map((item, index) => (
                             <div 
                                 className="col-md-6 draggable-header-item" 
@@ -231,6 +235,7 @@ const DynamicTable = ({
             {/* --- TABLE HEADER (Standard Mode) --- */}
             {!isReportMode && (
                 <div className="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    {/* Title automatically uses SF Pro Display via CSS h5 rule */}
                     <h5 className="fw-bold mb-0">{title}</h5>
                     <div>
                         <button className="btn btn-sm btn-outline-primary me-3" onClick={onAddColumn}><i className="bi bi-plus-circle me-1"></i> Add Column</button>
@@ -294,7 +299,12 @@ const DynamicTable = ({
                                 <tr key={row._rowId || idx}>
                                     {/* CONDITIONAL DN CELL */}
                                     {showDnColumn && (
-                                        <td className="px-3 py-3 text-center small fw-bold">{row[dnKey] || "-"}</td>
+                                        <td 
+                                            className="px-3 py-3 text-center fw-bold"
+                                            style={{ fontSize: "15px" }} // INCREASED FONT
+                                        >
+                                            {row[dnKey] || "-"}
+                                        </td>
                                     )}
 
                                     {columnOrder.map(key => {
@@ -331,16 +341,16 @@ const DynamicTable = ({
                                         return (
                                             <td 
                                                 key={key} 
-                                                className={`px-3 py-3 text-center small ${isEditable ? "cursor-pointer bg-light" : ""} ${isCalculated ? "bg-light-subtle fw-bold text-primary" : ""}`}
+                                                className={`px-3 py-3 text-center ${isEditable ? "cursor-pointer bg-light" : ""} ${isCalculated ? "bg-light-subtle fw-bold text-primary" : ""}`}
                                                 onClick={() => { if (isEditable && !isEditing) setEditingCell({ rowId: row._rowId, colKey: key }); }}
-                                                style={{ whiteSpace: "nowrap" }}
+                                                style={{ whiteSpace: "nowrap", fontSize: "15px" }} // --- INCREASED FONT SIZE HERE (15px) ---
                                             >
                                                 {isEditing ? (
                                                     <input 
-                                                        autoFocus type="text" className="form-control form-control-sm text-center p-0" defaultValue={row[key] || ""}
+                                                        autoFocus type="text" className="form-control text-center p-0" defaultValue={row[key] || ""}
                                                         onBlur={(e) => handleCellSave(row._rowId, key, e.target.value)}
                                                         onKeyDown={(e) => { if (e.key === 'Enter') handleCellSave(row._rowId, key, e.currentTarget.value); }}
-                                                        style={{minWidth: "60px"}}
+                                                        style={{minWidth: "60px", fontSize: "15px", height: "30px"}} // Match input size to cell
                                                     />
                                                 ) : (
                                                     formatDisplayValue(displayValue)
@@ -350,7 +360,7 @@ const DynamicTable = ({
                                     })}
                                     
                                     {showRemarksColumn && (
-                                        <td className="px-3 py-3 text-center small" style={{ whiteSpace: "nowrap" }}>{row[remarksKey] || "-"}</td>
+                                        <td className="px-3 py-3 text-center" style={{ whiteSpace: "nowrap", fontSize: "15px" }}>{row[remarksKey] || "-"}</td>
                                     )}
 
                                     {!isReportMode && <td className="text-center"><button className="btn btn-sm text-danger" onClick={() => onDeleteRow(row._rowId)}><i className="bi bi-trash3-fill"></i></button></td>}

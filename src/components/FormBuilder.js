@@ -327,7 +327,12 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
 
             <style>{`
                 * { box-sizing: border-box; }
-                html, body { margin: 0; padding: 0; background-color: #f8f9fa; font-size: 14px; }
+                
+                /* FONTS HANDLED GLOBALLY BY INDEX.CSS 
+                   Removed explicit font-size so it inherits 13px from body in index.css
+                */
+                html, body { margin: 0; padding: 0; background-color: #f8f9fa; }
+
                 .editor-toolbar { background-color: #f8f9fa; padding-bottom: 10px; border-bottom: none; }
                 .field-types-container { position: sticky; top: 80px; height: calc(100vh - 100px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e9ecef; display: flex; flex-direction: column; background: white; overflow: hidden; border-radius: 12px; z-index: 1000; }
                 .settings-panel { position: sticky; top: 80px; max-height: calc(100vh - 100px); background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 14px; overflow-y: auto; scrollbar-width: none; z-index: 1000; }
@@ -348,7 +353,6 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                 .btn { font-size: 14px; }
                 
                 fieldset.custom-fieldset { border: 1px solid #dee2e6; border-radius: 0.5rem; padding: 0.75rem 1rem 1rem 1rem; position: relative; background-color: white; }
-                /* Updated Legend Style */
                 .custom-fieldset legend { font-size: 0.9rem; font-weight: 600; width: auto; float: none; margin-bottom: 0; }
                 .custom-fieldset legend.clickable-legend:hover { filter: brightness(95%); }
             `}</style>
@@ -357,7 +361,7 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
             <div className="editor-toolbar pt-3 px-2">
                 <div className="bg-white p-2 rounded-3 shadow-sm d-flex justify-content-between align-items-center border">
                     <div>
-                        <h6 className="mb-1 fw-bold" style={{ color: '#212529', fontSize: '14px' }}>
+                        <h6 className="mb-1 fw-bold text-black " style={{ color: '#212529', fontSize: '15px' }}>
                             {initialData ? "Edit Form Template" : "Create New Template"}
                         </h6>
                         <small className="text-muted" style={{ fontSize: '14px' }}>
@@ -386,7 +390,7 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                 <fieldset className="custom-fieldset shadow-sm mb-4">
                     <legend className="px-2 text-muted d-flex align-items-center">
                         <i className="bi bi-info-circle me-2 text-primary" style={{ fontSize: '16px' }}></i>
-                        <span style={{ fontSize: '15px', fontWeight: '650' }}>Basic Information</span>
+                        <span  className= "text-black"style={{ fontSize: '15px', fontWeight: '650' }}>Basic Information</span>
                     </legend>
                     <div className="row g-3">
                         <div className="col-md-6">
@@ -556,7 +560,7 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                         <div className="field-types-container">
                             <div className="d-flex align-items-center p-3 border-bottom mb-2 bg-light">
                                 <div className="bg-primary bg-opacity-10 rounded-circle p-2 me-2"><i className="bi bi-plus-circle text-primary"></i></div>
-                                <h6 className="fw-bold mb-0" style={{ fontSize: '14px', color: '#212529' }}>Choose Elements From Here</h6>
+                                <h6 className="fw-bold mb-0 text-black" style={{ fontSize: '14px', color: '#212529' }}>Choose Elements From Here</h6>
                             </div>
                             <div className="field-sidebar">
                                 {FIELD_TYPES.map((fieldType) => (

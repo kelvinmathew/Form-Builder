@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 const FormPreview = ({ formData, onSubmit, onClose, readOnly = false }) => {
-    const { title, description, schema } = formData || {}; // Removed projectDetails from destructuring as it's not needed
+    const { title, description, schema } = formData || {}; 
     const fields = schema?.components || [];
     
     const [showSuccess, setShowSuccess] = useState(false);
@@ -103,6 +103,7 @@ const FormPreview = ({ formData, onSubmit, onClose, readOnly = false }) => {
                 .offcanvas-backdrop-custom {
                     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
                     background-color: rgba(0, 0, 0, 0.4); backdrop-filter: blur(2px); z-index: 9999;
+                    /* Fonts handled by global CSS */
                 }
                 .form-drawer {
                     position: absolute; top: 0; right: 0; height: 100%; width: 100%; max-width: 600px;
@@ -177,13 +178,11 @@ const FormPreview = ({ formData, onSubmit, onClose, readOnly = false }) => {
                         </div>
                     ) : (
                         <div className="drawer-content-paper">
-                            {/* Form Title & Description (Kept as requested, usually part of component view) */}
+                            {/* Form Title & Description */}
                             <div className="mb-4 border-bottom pb-4">
-                                <h2 className="fw-bold text-dark mb-2">{title || "Untitled Form"}</h2>
+                                <h3 className="fw-bold text-dark mb-2">{title || "Untitled Form"}</h3>
                                 {description && <p className="text-muted mb-0">{description}</p>}
                             </div>
-
-                            {/* REMOVED: Report Configuration Header (Project Details) */}
 
                             {/* Actual Form Fields */}
                             <form onSubmit={handleSubmit}>
@@ -205,7 +204,6 @@ const FormPreview = ({ formData, onSubmit, onClose, readOnly = false }) => {
                                     </div>
                                 )}
 
-                                {/* Submit Button Area (Footer Details Removed) */}
                                 <div className="mt-5 pt-4 border-top d-flex justify-content-end">
                                     <button type="submit" className="btn btn-primary btn-submit text-white" disabled={readOnly || fields.length === 0}>
                                         Submit Form

@@ -1,27 +1,48 @@
+/* 1. LOAD THE FILE */
+@font-face {
+  font-family: 'SF Pro';
+  src: url('./assets/fonts/SF-Pro-Text-Regular.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+/* 2. APPLY IT */
 body {
+  /* We removed ', sans-serif'. Now it ONLY looks for SF Pro. */
+  font-family: 'SF Pro'; 
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   background-color: #f5f5f5;
+  font-size: 13px; /* Global base size */
+  
 }
 
+/* 3. FORCE OVERRIDES 
+   Use !important to ensure Bootstrap doesn't overwrite our font 
+*/
+h1, h2, h3, h4, h5, h6,
+input, button, select, textarea,
+.form-control, .form-select, .btn, 
+.navbar, .card, strong, b, label, span, p, div {
+  font-family: 'SF Pro' !important;
+  font-size: 12xp;
+}
+
+/* Utilities */
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, monospace; 
 }
 
-.nav-link.active {
-  color: #3498db !important;
-  border-bottom: 2px solid #3498db !important;
+.form-card {
+  transition: all 0.2s ease-in-out;
+}
+.form-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
 }
 
-.nav-link {
-  color: #7f8c8d !important;
-}
+.cursor-pointer { cursor: pointer; }
 
+/* Remove default blue outlines */
 .btn:focus,
 .form-control:focus,
 .form-select:focus {
@@ -29,13 +50,6 @@ code {
   outline: none;
 }
 
-.table thead th {
-  font-weight: 600;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.table tbody td {
-  font-size: 14px;
-  vertical-align: middle;
+.formio-component-submit {
+  margin-top: 20px;
 }
