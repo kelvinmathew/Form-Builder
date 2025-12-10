@@ -7,21 +7,39 @@ import FormEntryManager from "./components/FormEntryManager";
 import "./App.css";
 
 const App = () => {
-  // Views: 'dashboard', 'builder', 'manager'
-  const [view, setView] = useState("dashboard");
+  // --- UPDATED: Initialize State from LocalStorage (Fixes Refresh Issue) ---
   
-  // Data State
-  const [forms, setForms] = useState([]);
-  const [responses, setResponses] = useState({});
-  const [selectedFormId, setSelectedFormId] = useState(null);
+  // 1. Recover View ('dashboard', 'builder', etc.)
+  const [view, setView] = useState(() => localStorage.getItem("app_view") || "dashboard");
+  
+  // 2. Recover Selected ID (so we know which form to show on refresh)
+  const [selectedFormId, setSelectedFormId] = useState(() => {
+    const savedId = localStorage.getItem("app_selected_id");
+    return savedId ? Number(savedId) : null;
+  });
+
+  // 3. Recover Data immediately (Critical so FormBuilder gets data on first render)
+  const [forms, setForms] = useState(() => {
+    const saved = localStorage.getItem("app_forms");
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [responses, setResponses] = useState(() => {
+    const saved = localStorage.getItem("app_responses");
+    return saved ? JSON.parse(saved) : {};
+  });
 
   // --- Persistence Logic ---
+
+  // UPDATED: Save View & ID whenever they change
   useEffect(() => {
-    const savedForms = localStorage.getItem("app_forms");
-    const savedResponses = localStorage.getItem("app_responses");
-    if (savedForms) setForms(JSON.parse(savedForms));
-    if (savedResponses) setResponses(JSON.parse(savedResponses));
-  }, []);
+    localStorage.setItem("app_view", view);
+    if (selectedFormId) {
+        localStorage.setItem("app_selected_id", selectedFormId);
+    } else {
+        localStorage.removeItem("app_selected_id");
+    }
+  }, [view, selectedFormId]);
 
   const saveData = (newForms, newResponses) => {
     if (newForms) {
@@ -50,12 +68,14 @@ const App = () => {
       updatedForms = [...forms, { ...formData, id: Date.now(), createdAt: new Date().toLocaleDateString() }];
     }
     saveData(updatedForms, null);
+    
+    // Navigate back
     setView("dashboard");
+    setSelectedFormId(null);
   };
 
   // 2. Delete Form
   const handleDeleteForm = (id) => {
-    // Dashboard handles the confirmation modal now
     const updatedForms = forms.filter(f => f.id !== id);
     const updatedResponses = { ...responses };
     delete updatedResponses[id];
@@ -68,13 +88,26 @@ const App = () => {
     setView("manager");
   };
 
-  // 4. Submit New Row (Create)
+  // 4. Submit New Row (Create & Bulk Save)
   const handleSubmitEntry = (data) => {
     const currentList = responses[selectedFormId] || [];
-    const newRow = { ...data, _rowId: data._rowId || Date.now().toString() }; 
+    let newItems = [];
+
+    if (Array.isArray(data)) {
+       newItems = data.map(item => ({
+         ...item,
+         _rowId: item._rowId || Date.now().toString() + Math.random().toString(36).substr(2, 9)
+       }));
+    } else {
+       newItems = [{
+         ...data,
+         _rowId: data._rowId || Date.now().toString()
+       }];
+    }
+
     const updatedResponses = { 
       ...responses, 
-      [selectedFormId]: [...currentList, newRow] 
+      [selectedFormId]: [...currentList, ...newItems] 
     };
     saveData(null, updatedResponses);
   };
@@ -83,7 +116,6 @@ const App = () => {
   const handleUpdateEntry = (updatedEntry) => {
     const currentList = responses[selectedFormId] || [];
     
-    // Map through list and replace the specific row by ID
     const updatedList = currentList.map((row) => 
       row._rowId === updatedEntry._rowId ? updatedEntry : row
     );
@@ -96,14 +128,22 @@ const App = () => {
   };
 
   // 6. Delete Row (Entry)
-  const handleDeleteEntry = (rowId) => {
+  const handleDeleteEntry = (rowIdOrObj) => {
+    const idToDelete = typeof rowIdOrObj === 'object' ? rowIdOrObj._rowId : rowIdOrObj;
+
     const currentList = responses[selectedFormId] || [];
-    const updatedList = currentList.filter(row => row._rowId !== rowId);
+    const updatedList = currentList.filter(row => row._rowId !== idToDelete);
     const updatedResponses = { 
       ...responses, 
       [selectedFormId]: updatedList 
     };
     saveData(null, updatedResponses);
+  };
+
+  // Helper to go back to dashboard safely
+  const handleBackToDashboard = () => {
+      setView("dashboard");
+      setSelectedFormId(null);
   };
 
   return (
@@ -118,7 +158,7 @@ const App = () => {
           <span 
             className=" fs-4 navbar-brand d-flex align-items-center gap-2 fw-bold mb-0 text-dark" 
             style={{ cursor: "pointer" }} 
-            onClick={() => setView("dashboard")}
+            onClick={handleBackToDashboard} 
           >
             {/* Modern Logo Mark */}
             <div 
@@ -126,7 +166,7 @@ const App = () => {
               style={{ 
                 width: "39px", 
                 height: "41px", 
-                background: "linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)", // Indigo gradient
+                background: "linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)", 
                 color: "white" 
               }}
             >
@@ -151,9 +191,9 @@ const App = () => {
 
         {view === "builder" && (
           <FormBuilder 
-            initialData={forms.find(f => f.id === selectedFormId)}
+            initialData={selectedFormId ? forms.find(f => f.id === selectedFormId) : null}
             onSave={handleSaveForm}
-            onCancel={() => setView("dashboard")}
+            onCancel={handleBackToDashboard}
           />
         )}
 
@@ -164,7 +204,7 @@ const App = () => {
             onSubmit={handleSubmitEntry}
             onUpdate={handleUpdateEntry} 
             onDeleteRow={handleDeleteEntry}
-            onBack={() => setView("dashboard")}
+            onBack={handleBackToDashboard}
           />
         )}
       </div>

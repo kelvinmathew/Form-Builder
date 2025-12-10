@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import FormPreview from "./FormPreview"; // Importing the separate component
+import React, { useState, useEffect } from "react";
+import FormPreview from "./FormPreview"; // Ensure this import path is correct
 
 const FIELD_TYPES = [
     { type: "textfield", label: "Text Input", icon: "bi-input-cursor-text" },
@@ -37,11 +37,17 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
     const [showPreview, setShowPreview] = useState(false);
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
-    // NEW: Cancel Confirmation Modal State
     const [showCancelModal, setShowCancelModal] = useState(false);
 
-    // deleteConfirm now handles 'headers', 'footers', and 'field'
+    // --- NEW: Inline Error State for Settings ---
+    const [settingsError, setSettingsError] = useState("");
+
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, section: null, id: null });
+
+    // --- EFFECT: Clear inline error when switching fields ---
+    useEffect(() => {
+        setSettingsError("");
+    }, [editingField?.key]);
 
     const addDetailField = (section) => {
         const newField = section === 'footers'
@@ -82,22 +88,18 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
         }
     };
 
-    // Generic delete request (handles canvas fields + header/footer)
     const requestDeleteDetail = (section, id) => {
         setDeleteConfirm({ show: true, section, id });
     };
 
-    // Consolidated confirm logic
     const confirmDeleteDetail = () => {
         const { section, id } = deleteConfirm;
         if (!section || !id) return;
 
-        // CASE 1: Deleting a Field from Canvas
         if (section === 'field') {
             setFields(fields.filter((f) => f.key !== id));
             if (editingField?.key === id) setEditingField(null);
         }
-        // CASE 2: Deleting Header or Footer details
         else {
             setProjectDetails(prev => ({
                 ...prev,
@@ -166,6 +168,7 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
             placeholder: "",
             input: true,
             validate: { required: false },
+            showInList: false, 
             ...(fieldType.type === "select" && {
                 data: { values: defaultOptions },
                 defaultValue: ""
@@ -183,7 +186,6 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
         setEditingField(newField);
     };
 
-    // Drag and Drop Logic
     const handleDragStart = (e, fieldType) => { setDraggedItem(fieldType); e.dataTransfer.effectAllowed = "copy"; };
     const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; };
     const handleDrop = (e) => {
@@ -211,8 +213,6 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
 
     const handleDoubleClick = (fieldType) => addNewField(fieldType);
     const handleFieldUpdate = (updatedField) => { setFields(fields.map((f) => (f.key === updatedField.key ? updatedField : f))); setEditingField(updatedField); };
-
-    // Note: handleDeleteField logic is now inside confirmDeleteDetail
 
     const handleMoveField = (index, direction) => {
         const newFields = [...fields]; const newIndex = index + direction;
@@ -336,12 +336,10 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
 
             <style>{`
                 * { box-sizing: border-box; }
-                
                 html, body { margin: 0; padding: 0; background-color: #F3F4F6; }
-
                 .editor-toolbar { background-color: transparent; border-bottom: none; }
                 
-                /* Layout Styles */
+                /* Layout Styles - Desktop Defaults */
                 .field-types-container { 
                     position: sticky; top: 100px; 
                     height: calc(100vh - 120px); 
@@ -355,21 +353,13 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                 }
                 
                 .field-sidebar { flex: 1; overflow-y: auto; padding: 8px 12px 20px 12px; scrollbar-width: thin; scrollbar-color: #cbd5e0 transparent; }
-                .field-sidebar::-webkit-scrollbar { width: 8px; display: block; }
-                .field-sidebar::-webkit-scrollbar-track { background: transparent; }
-                .field-sidebar::-webkit-scrollbar-thumb { background-color: #cbd5e0; border-radius: 4px; }
-                
                 .field-type-item { 
                     padding: 10px 12px; margin-bottom: 8px; background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); 
                     border: 1px solid #e9ecef; border-radius: 8px; cursor: grab; transition: all 0.3s ease; 
                     display: flex; align-items: center; gap: 10px; user-select: none; font-size: 14px; 
                     box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
                 }
-                /* FORCE 14px override for sidebar items */
-                .field-type-item span {
-                    font-size: 14px !important;
-                }
-
+                .field-type-item span { font-size: 14px !important; }
                 .field-type-item:hover { background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%); border-color: #0d6efd; box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15); transform: translateY(-1px); }
                 
                 .canvas-area { min-height: 400px; height: auto; border: 2px dashed #dee2e6; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #fafbfc 0%, #ffffff 100%); transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
@@ -379,91 +369,89 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                 .field-card:hover { border-color: #0d6efd; box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15); transform: translateY(-2px); }
                 .field-card.active { border-color: #0d6efd; background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%); box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15); transform: translateY(-1px); }
                 
-                .settings-panel::-webkit-scrollbar { display: none; }
-                .content-wrapper { flex: 1; }
                 .form-control, .form-select { transition: border-color 0.2s, background-color 0.2s; font-size: 14px; }
-                .btn { font-size: 14px; }
                 
                 fieldset.custom-fieldset { border: 1px solid #dee2e6; border-radius: 0.5rem; padding: 0.75rem 1rem 1rem 1rem; position: relative; background-color: white; }
                 .custom-fieldset legend { font-size: 0.9rem; font-weight: 600; width: auto; float: none; margin-bottom: 0; }
-                .custom-fieldset legend.clickable-legend:hover { filter: brightness(95%); }
+                
+                /* MOBILE RESPONSIVE OVERRIDES */
+                @media (max-width: 768px) {
+                    .field-types-container {
+                        position: relative !important; top: 0 !important; height: auto !important;
+                        border-radius: 8px; margin-bottom: 20px; box-shadow: none !important; border: 1px solid #dee2e6;
+                    }
+                    .field-sidebar {
+                        display: flex; flex-direction: row; overflow-x: auto; padding: 10px; white-space: nowrap; gap: 10px;
+                    }
+                    .field-type-item { min-width: 120px; justify-content: center; margin-bottom: 0 !important; flex-shrink: 0; }
+                    
+                    /* Settings Panel Slide-up */
+                    .settings-panel {
+                        position: fixed !important; bottom: 0; left: 0; right: 0; top: auto !important;
+                        height: 60vh !important; border-radius: 20px 20px 0 0 !important;
+                        box-shadow: 0 -5px 20px rgba(0,0,0,0.2) !important; z-index: 1050;
+                        animation: slideUp 0.3s ease-out;
+                    }
+                    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+                    
+                    .canvas-area { min-height: 200px; padding: 10px; }
+                    .d-none-mobile { display: none !important; }
+                }
             `}</style>
 
-            {/* --- EDITOR TOOLBAR (Sticky + Centered) --- */}
+            {/* --- EDITOR TOOLBAR --- */}
             <div className="sticky-top" style={{ backgroundColor: "#F3F4F6", zIndex: 1020 }}>
-                <div className="container px-4 py-3">
-                    <div className="bg-white p-3 rounded-3 shadow-sm d-flex justify-content-between align-items-center border">
+                <div className="container px-2 px-md-4 py-3">
+                    <div className="bg-white p-3 rounded-3 shadow-sm d-flex flex-wrap justify-content-between align-items-center border gap-2">
                         <div>
-                            {/* Updated to 16px */}
                             <h6 className="mb-1 fw-bold text-black " style={{ color: '#212529', fontSize: '20px' }}>
-                                {initialData ? "Edit Form Template" : "Create New Template"}
+                                {initialData ? "Edit Template" : "New Template"}
                             </h6>
-                            <small className="text-muted" style={{ fontSize: '14px' }}>
+                            <small className="text-muted d-none d-md-block" style={{ fontSize: '14px' }}>
                                 Drag or double-click fields to add
                             </small>
                         </div>
-                        <div className="d-flex gap-2">
+                        <div className="d-flex gap-2 ms-auto">
                             <button className="btn btn-sm btn-outline-dark px-1 rounded-3" onClick={() => setShowPreview(true)}>
-                                <i className="bi bi-eye me-1" ></i>Preview Form
+                                <i className="bi bi-eye me-1" ></i><span className="d-none d-md-inline">Preview</span>
                             </button>
                             <div className="vr mx-1"></div>
-                            
-                            {/* UPDATED: Cancel button triggers the Modal */}
                             <button className="btn btn-sm btn-light border rounded-3 px-3" onClick={() => setShowCancelModal(true)}>
-                                <i className="bi bi-x-circle me-1"></i>Cancel
+                                <i className="bi bi-x-circle me-1"></i><span className="d-none d-md-inline">Cancel</span>
                             </button>
-                            
                             <button className="btn btn-sm btn-primary rounded-3 px-2" onClick={handleSaveClick}>
-                                <i className="bi bi-check-circle me-1"></i>Save Form
+                                <i className="bi bi-check-circle me-1"></i><span className="d-none d-md-inline">Save</span>
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* --- MAIN CONTENT (Centered Container) --- */}
-            <div className="container px-4 pb-5">
+            {/* --- MAIN CONTENT --- */}
+            <div className="container px-2 px-md-4 pb-5">
 
                 {/* --- SECTION 1: TITLE & DESCRIPTION --- */}
                 <fieldset className="custom-fieldset shadow-sm mb-4">
                     <legend className="px-2 text-muted d-flex align-items-center">
                         <i className="bi bi-info-circle me-2 text-primary" style={{ fontSize: '16px' }}></i>
-                        {/* Updated to 14px */}
-                        <span className="text-black" style={{ fontSize: '15px', fontWeight: '650' }}>Basic Information</span>
+                        <span className="text-black" style={{ fontSize: '15px', fontWeight: '650' }}>Basic Info</span>
                     </legend>
                     <div className="row g-3">
-                        <div className="col-md-6">
-                            <label className="form-label fw-bold mb-1" style={{ fontSize: '14px', color: '#6c757d' }}>Form Title</label>
-                            <input
-                                className={`form-control ${getHighlightStyle(title)}`}
-                                placeholder="Enter Form Title"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                style={{ borderRadius: '6px', fontSize: '14px' }}
-                            />
+                        <div className="col-12 col-md-6">
+                            <label className="form-label fw-bold mb-1" style={{ fontSize: '14px', color: '#4d4f50ff' }}>Form Title</label>
+                            <input className={`form-control ${getHighlightStyle(title)}`} placeholder="Enter Form Title" value={title} onChange={(e) => setTitle(e.target.value)} style={{ borderRadius: '6px', fontSize: '14px' }} />
                         </div>
-                        <div className="col-md-6">
-                            <label className="form-label fw-bold mb-1" style={{ fontSize: '14px', color: '#6c757d' }}>Description</label>
-                            <input
-                                className={`form-control ${getHighlightStyle(description)}`}
-                                placeholder="Enter Description"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                style={{ borderRadius: '6px', fontSize: '14px' }}
-                            />
+                        <div className="col-12 col-md-6">
+                            <label className="form-label fw-bold mb-1" style={{ fontSize: '14px', color: '#4d4f50ff' }}>Description</label>
+                            <input className={`form-control ${getHighlightStyle(description)}`} placeholder="Enter Description" value={description} onChange={(e) => setDescription(e.target.value)} style={{ borderRadius: '6px', fontSize: '14px' }} />
                         </div>
                     </div>
                 </fieldset>
 
                 {/* --- SECTION 2: REPORT CONFIGURATION --- */}
                 <fieldset className="custom-fieldset shadow-sm mb-2 border-primary border-opacity-50">
-                    <legend
-                        className="d-flex justify-content-between align-items-center w-100 clickable-legend alert alert-primary border-primary shadow-sm py-2 px-3"
-                        onClick={() => setShowReportConfig(!showReportConfig)}
-                        style={{ cursor: 'pointer', userSelect: 'none' }}
-                        title={showReportConfig ? "Click to Collapse" : "Click to Expand"}
-                    >
-                        <span className="fw-bold text-black"><i className="bi bi-layout-text-window-reverse me-2"></i>Manage Header & Footer Details</span>
+                    <legend className="d-flex justify-content-between align-items-center w-100 clickable-legend alert alert-primary border-primary shadow-sm py-2 px-3" onClick={() => setShowReportConfig(!showReportConfig)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                        <span className="fw-bold text-black"><i className="bi bi-layout-text-window-reverse me-2"></i>Header & Footer</span>
                         <div className="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" style={{ width: '28px', height: '28px' }}>
                             <i className={`bi ${showReportConfig ? 'bi-chevron-up' : 'bi-chevron-down'} fw-bold`} style={{ fontSize: '14px' }}></i>
                         </div>
@@ -473,14 +461,9 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                         <div className="mt-2 px-1">
                             {/* Header Section */}
                             <div className="d-flex justify-content-between align-items-center mb-2 border-bottom pb-1">
-                                <h6 className="fw-bold small  text-muted mb-0" style={{ fontSize: '14px' }}>Header Details</h6>
-                                <button
-                                    className="btn btn-xs btn-primary py-0 px-2 rounded-2 d-flex align-items-center"
-                                    style={{ fontSize: '11px' }}
-                                    onClick={() => addDetailField('headers')}
-                                >
-                                    <i className="bi bi-plus me-1 d-flex align-items-center"></i>
-                                    Add
+                                <h6 className="fw-bold small text-muted mb-0">Header Details</h6>
+                                <button className="btn btn-xs btn-primary py-0 px-2 rounded-2" style={{ fontSize: '11px' }} onClick={() => addDetailField('headers')}>
+                                    <i className="bi bi-plus me-1"></i>Add
                                 </button>
                             </div>
 
@@ -488,41 +471,23 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                                 {projectDetails.headers && projectDetails.headers.map((item) => (
                                     <div className="row g-2 mb-2 align-items-start" key={item.id}>
                                         <div className="col-5">
-                                            <input
-                                                className={`form-control form-control-sm ${detailErrors[`headers_${item.id}_label`] ? 'is-invalid' : ''} ${getHighlightStyle(item.label)}`}
-                                                placeholder="Label (e.g. Station)"
-                                                value={item.label}
-                                                onChange={e => updateDetailField('headers', item.id, 'label', e.target.value)}
-                                            />
+                                            <input className={`form-control form-control-sm ${detailErrors[`headers_${item.id}_label`] ? 'is-invalid' : ''} ${getHighlightStyle(item.label)}`} placeholder="Label" value={item.label} onChange={e => updateDetailField('headers', item.id, 'label', e.target.value)} />
                                         </div>
                                         <div className="col-6">
-                                            <input
-                                                className={`form-control form-control-sm ${detailErrors[`headers_${item.id}_value`] ? 'is-invalid' : ''} ${getHighlightStyle(item.value)}`}
-                                                placeholder="Value"
-                                                value={item.value}
-                                                onChange={e => updateDetailField('headers', item.id, 'value', e.target.value)}
-                                            />
+                                            <input className={`form-control form-control-sm ${detailErrors[`headers_${item.id}_value`] ? 'is-invalid' : ''} ${getHighlightStyle(item.value)}`} placeholder="Value" value={item.value} onChange={e => updateDetailField('headers', item.id, 'value', e.target.value)} />
                                         </div>
                                         <div className="col-1 text-end">
-                                            <button className="btn btn-sm btn-outline-danger border-0 py-0" onClick={() => requestDeleteDetail('headers', item.id)}>
-                                                <i className="bi bi-trash"></i>
-                                            </button>
+                                            <button className="btn btn-sm btn-outline-danger border-0 py-0" onClick={() => requestDeleteDetail('headers', item.id)}><i className="bi bi-trash"></i></button>
                                         </div>
                                     </div>
                                 ))}
-                                {(!projectDetails.headers || projectDetails.headers.length === 0) && <p className="text-muted small fst-italic text-center">No header fields.</p>}
                             </div>
 
                             {/* Footer Section */}
                             <div className="d-flex justify-content-between align-items-center mb-2 border-bottom pb-1 mt-3">
-                                <h6 className="fw-bold small  text-muted mb-0" style={{ fontSize: '14px' }}>Footer Details</h6>
-                                <button
-                                    className="btn btn-xs btn-primary py-0 px-2 rounded-2 d-flex align-items-center"
-                                    style={{ fontSize: '11px' }}
-                                    onClick={() => addDetailField('footers')}
-                                >
-                                    <i className="bi bi-plus me-1 d-flex align-items-center"></i>
-                                    Add
+                                <h6 className="fw-bold small text-muted mb-0">Footer Details</h6>
+                                <button className="btn btn-xs btn-primary py-0 px-2 rounded-2" style={{ fontSize: '11px' }} onClick={() => addDetailField('footers')}>
+                                    <i className="bi bi-plus me-1"></i>Add
                                 </button>
                             </div>
 
@@ -530,37 +495,17 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                                 {projectDetails.footers && projectDetails.footers.map((item) => (
                                     <div className="card border-0 shadow-sm mb-2 p-2 bg-light" key={item.id}>
                                         <div className="row g-2 align-items-center">
-
-                                            {/* 1. Type Selector (First) */}
-                                            <div className="col-md-4">
-                                                <select
-                                                    className="form-select form-select-sm"
-                                                    value={item.type || "text"}
-                                                    onChange={e => updateDetailField('footers', item.id, 'type', e.target.value)}
-                                                >
+                                            <div className="col-12 col-md-4">
+                                                <select className="form-select form-select-sm" value={item.type || "text"} onChange={e => updateDetailField('footers', item.id, 'type', e.target.value)}>
                                                     <option value="text">Text Input</option>
                                                     <option value="image">Signature/Image</option>
                                                 </select>
                                             </div>
-
-                                            {/* 2. Value Input (Conditional: Text or Image Upload) */}
-                                            <div className="col-md-7">
+                                            <div className="col-10 col-md-7">
                                                 {item.type === 'image' ? (
                                                     <div className="d-flex align-items-start gap-2">
                                                         <div className="flex-grow-1">
-                                                            <input
-                                                                type="file"
-                                                                accept="image/*"
-                                                                className={`form-control form-control-sm ${detailErrors[`footers_${item.id}_value`] ? 'is-invalid' : ''} ${getHighlightStyle(item.value)}`}
-                                                                onChange={(e) => handleFooterImageUpload('footers', item.id, e.target.files[0])}
-                                                            />
-                                                            {detailErrors[`footers_${item.id}_value`] && (
-                                                                <div className="invalid-feedback d-block text-start">
-                                                                    <i className="bi bi-exclamation-circle me-1"></i>
-                                                                    {detailErrors[`footers_${item.id}_value`]}
-                                                                </div>
-                                                            )}
-                                                            <small className="text-muted d-block mt-1" style={{ fontSize: '11px' }}>Upload signature</small>
+                                                            <input type="file" accept="image/*" className={`form-control form-control-sm ${detailErrors[`footers_${item.id}_value`] ? 'is-invalid' : ''} ${getHighlightStyle(item.value)}`} onChange={(e) => handleFooterImageUpload('footers', item.id, e.target.files[0])} />
                                                         </div>
                                                         {item.value && (
                                                             <div className="border rounded bg-white p-1 text-center" style={{ minWidth: '50px' }}>
@@ -569,37 +514,28 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <input
-                                                        className={`form-control form-control-sm ${detailErrors[`footers_${item.id}_value`] ? 'is-invalid' : ''} ${getHighlightStyle(item.value)}`}
-                                                        placeholder="Enter footer text (e.g. Approved By)"
-                                                        value={item.value}
-                                                        onChange={e => updateDetailField('footers', item.id, 'value', e.target.value)}
-                                                    />
+                                                    <input className={`form-control form-control-sm ${detailErrors[`footers_${item.id}_value`] ? 'is-invalid' : ''} ${getHighlightStyle(item.value)}`} placeholder="Enter text" value={item.value} onChange={e => updateDetailField('footers', item.id, 'value', e.target.value)} />
                                                 )}
                                             </div>
-
-                                            {/* 3. Delete Button */}
-                                            <div className="col-md-1 text-end">
-                                                <button className="btn btn-sm btn-outline-danger border-0 py-0" onClick={() => requestDeleteDetail('footers', item.id)}>
-                                                    <i className="bi bi-trash"></i>
-                                                </button>
+                                            <div className="col-2 col-md-1 text-end">
+                                                <button className="btn btn-sm btn-outline-danger border-0 py-0" onClick={() => requestDeleteDetail('footers', item.id)}><i className="bi bi-trash"></i></button>
                                             </div>
-
                                         </div>
                                     </div>
                                 ))}
-                                {(!projectDetails.footers || projectDetails.footers.length === 0) && <p className="text-muted small fst-italic text-center">No footer fields.</p>}
                             </div>
                         </div>
                     )}
                 </fieldset>
 
+                {/* --- 3-COLUMN LAYOUT (RESPONSIVE) --- */}
                 <div className="row g-2 mt-2">
-                    <div className="col-md-3">
+                    {/* 1. TOOLBOX (Sidebar) -> Mobile Order: 3 (Bottom/Scroll), Desktop: 1 */}
+                    <div className="col-12 col-md-3 order-3 order-md-1">
                         <div className="field-types-container">
                             <div className="d-flex align-items-center p-3 border-bottom mb-2 bg-light">
                                 <div ><i className=" fs-6 bi bi-plus-circle text-primary me-2"></i></div>
-                                <span className="fw-bold mb-0 text-black" style={{ color: '#212529' }}>Choose Elements From Here</span>
+                                <span className="fw-bold mb-0 text-black" style={{ color: '#212529' }}>Add Fields</span>
                             </div>
                             <div className="field-sidebar">
                                 {FIELD_TYPES.map((fieldType) => (
@@ -611,7 +547,8 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                         </div>
                     </div>
 
-                    <div className="col-md-5">
+                    {/* 2. CANVAS (The Form) -> Mobile Order: 1 (Top), Desktop: 2 */}
+                    <div className="col-12 col-md-5 order-1 order-md-2">
                         <div className={`canvas-area ${draggedItem ? "drag-over" : ""}`} onDragOver={handleDragOver} onDrop={handleDrop}>
                             {fields.length === 0 ? (
                                 <div className="text-center text-muted py-4">
@@ -635,7 +572,6 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                                             <div className="btn-group btn-group-sm">
                                                 <button className="btn btn-outline-secondary btn-sm" onClick={(e) => { e.stopPropagation(); handleMoveField(index, -1); }} disabled={index === 0}><i className="bi bi-arrow-up"></i></button>
                                                 <button className="btn btn-outline-secondary btn-sm" onClick={(e) => { e.stopPropagation(); handleMoveField(index, 1); }} disabled={index === fields.length - 1}><i className="bi bi-arrow-down"></i></button>
-                                                {/* UPDATED: Delete Button now calls requestDeleteDetail with 'field' section */}
                                                 <button className="btn btn-outline-danger btn-sm" onClick={(e) => { e.stopPropagation(); requestDeleteDetail('field', field.key); }}><i className="bi bi-trash"></i></button>
                                             </div>
                                         </div>
@@ -646,13 +582,19 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                         </div>
                     </div>
 
-                    <div className="col-md-4">
+                    {/* 3. SETTINGS (Right Panel) -> Mobile Order: 2 (Drawer), Desktop: 3 */}
+                    <div className="col-12 col-md-4 order-2 order-md-3">
                         {editingField ? (
-                            <div className="settings-panel">
-                                <div className="d-flex align-items-center mb-3">
-                                    <div className="bg-primary bg-opacity-10 rounded-circle p-2 me-2"><i className="bi bi-gear text-primary"></i></div>
-                                    <h6 className="fw-bold mb-0" style={{ fontSize: '14px', color: '#212529' }}>Field Settings</h6>
+                            <div className="settings-panel shadow-sm">
+                                <div className="d-flex align-items-center mb-3 justify-content-between">
+                                    <div className="d-flex align-items-center">
+                                        <div className="bg-primary bg-opacity-10 rounded-circle p-2 me-2"><i className="bi bi-gear text-primary"></i></div>
+                                        <h6 className="fw-bold mb-0" style={{ fontSize: '14px', color: '#212529' }}>Field Settings</h6>
+                                    </div>
+                                    {/* Mobile Close Button */}
+                                    <button className="btn btn-sm btn-close d-md-none" onClick={() => setEditingField(null)}></button>
                                 </div>
+                                
                                 <div className="mb-2">
                                     <label className="form-label small fw-bold mb-1" style={{ fontSize: '14px' }}>Label</label>
                                     <input className="form-control form-control-sm" value={editingField.label} onChange={(e) => handleFieldUpdate({ ...editingField, label: e.target.value })} style={{ fontSize: '14px' }} />
@@ -661,12 +603,41 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                                     <label className="form-label small fw-bold mb-1" style={{ fontSize: '14px' }}>Placeholder</label>
                                     <input className="form-control form-control-sm" value={editingField.placeholder || ""} onChange={(e) => handleFieldUpdate({ ...editingField, placeholder: e.target.value })} style={{ fontSize: '14px' }} />
                                 </div>
-                                <div className="mb-2">
+                                
+                                {/* UPDATED: Inline Checkboxes + Inline Error Message */}
+                                <div className="mb-2 d-flex flex-wrap gap-3 align-items-center">
                                     <div className="form-check">
                                         <input type="checkbox" className="form-check-input" checked={editingField.validate?.required || false} onChange={(e) => handleFieldUpdate({ ...editingField, validate: { ...editingField.validate, required: e.target.checked, }, })} />
                                         <label className="form-check-label small" style={{ fontSize: '14px' }}>Required field</label>
                                     </div>
+
+                                    <div className="form-check">
+                                        <input 
+                                            type="checkbox" 
+                                            className="form-check-input" 
+                                            checked={editingField.showInList || false} 
+                                            onChange={(e) => {
+                                                const isChecked = e.target.checked;
+                                                const currentCount = fields.filter(f => f.showInList).length;
+                                                
+                                                if (isChecked && currentCount >= 2 && !editingField.showInList) {
+                                                    setSettingsError("Max 2 fields allowed in Entry List.");
+                                                    return;
+                                                }
+                                                setSettingsError(""); 
+                                                handleFieldUpdate({ ...editingField, showInList: isChecked });
+                                            }} 
+                                        />
+                                        <label className="form-check-label small" style={{ fontSize: '14px' }}>Show in Entry List</label>
+                                    </div>
                                 </div>
+                                
+                                {/* Inline Error Message */}
+                                {settingsError && (
+                                    <div className="text-danger small mb-2 animate-shake" style={{ fontSize: '12px' }}>
+                                        <i className="bi bi-exclamation-circle me-1"></i>{settingsError}
+                                    </div>
+                                )}
 
                                 {(editingField.type === "select" || editingField.type === "radio" || editingField.type === "checkbox") && (
                                     <div className="mb-2 border-top pt-2">
@@ -689,7 +660,6 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                                                             className="form-check-input mt-0"
                                                             type={editingField.type === "checkbox" ? "checkbox" : "radio"}
                                                             name={editingField.type === "checkbox" ? undefined : "defaultOptionSelector"}
-                                                            title="Set as default"
                                                             checked={
                                                                 editingField.type === "checkbox"
                                                                     ? editingField.defaultValue?.includes(opt.value)
@@ -734,10 +704,10 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                                         </button>
                                     </div>
                                 )}
-                                <button className="btn btn-outline-secondary btn-sm w-100 mt-2" onClick={() => setEditingField(null)} style={{ fontSize: '14px' }}>Close Settings</button>
+                                <button className="btn btn-outline-secondary btn-sm w-100 mt-2 d-none d-md-block" onClick={() => setEditingField(null)} style={{ fontSize: '14px' }}>Close Settings</button>
                             </div>
                         ) : (
-                            <div className="settings-panel text-center text-muted py-3">
+                            <div className="settings-panel text-center text-muted py-3 d-none-mobile">
                                 <i className="bi bi-hand-index fs-4 d-block mb-2"></i><p className="mb-0" style={{ fontSize: '14px' }}>Click on a field to edit its settings</p>
                             </div>
                         )}
@@ -753,7 +723,7 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                             <div className="modal-body text-center p-4">
                                 <i className="bi bi-trash text-danger fs-1 mb-2"></i>
                                 <h6 className="fw-bold mb-2 text-dark" style={{ fontSize: '16px' }}>Delete Item?</h6>
-                                <p className="text-muted small mb-4" style={{ fontSize: '14px' }}>Are you sure you want to delete this item? This action cannot be undone.</p>
+                                <p className="text-muted small mb-4" style={{ fontSize: '14px' }}>This action cannot be undone.</p>
                                 <div className="d-flex gap-2 justify-content-center">
                                     <button className="btn btn-outline-secondary btn-sm rounded-6 px-3" onClick={cancelDeleteDetail} style={{ fontSize: '14px' }}>Cancel</button>
                                     <button className="btn btn-danger btn-sm rounded-6 px-3" onClick={confirmDeleteDetail} style={{ fontSize: '14px' }}>Confirm</button>
@@ -772,7 +742,7 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                             <div className="modal-body text-center p-4">
                                 <i className="bi bi-x-circle text-warning fs-1 mb-2"></i>
                                 <h6 className="fw-bold mb-2 text-dark" style={{ fontSize: '16px' }}>Exit Editor?</h6>
-                                <p className="text-muted small mb-4" style={{ fontSize: '14px' }}>Unsaved changes will be lost. Are you sure you want to leave?</p>
+                                <p className="text-muted small mb-4" style={{ fontSize: '14px' }}>Unsaved changes will be lost.</p>
                                 <div className="d-flex gap-2 justify-content-center">
                                     <button className="btn btn-outline-secondary btn-sm rounded-6 px-3" onClick={() => setShowCancelModal(false)} style={{ fontSize: '14px' }}>Stay</button>
                                     <button className="btn btn-danger btn-sm rounded-6 px-3 " onClick={handleConfirmCancel} style={{ fontSize: '14px' }}>Leave</button>

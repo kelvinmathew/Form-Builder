@@ -69,7 +69,6 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
     };
 
     const handleSave = () => {
-        // UPDATED: Use State for Error Modal instead of Alert
         if (!colName.trim()) {
             setErrorMessage("Please enter a column name.");
             setShowError(true);
@@ -97,8 +96,9 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
         <>
             {/* --- MAIN MODAL --- */}
             <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
-                <div className="modal-dialog modal-dialog-centered">
-                    <div className="modal-content border-0 shadow-lg rounded-5" style={{ minHeight: '400px' }}>
+                {/* Responsive Width: Added mx-3 for mobile margin */}
+                <div className="modal-dialog modal-dialog-centered mx-3 mx-md-auto">
+                    <div className="modal-content border-0 shadow-lg rounded-4" style={{ minHeight: '400px' }}>
                         <div className="modal-header border-bottom-3 pb-2">
                             <h5 className="modal-title fw-bold">Add Custom Column</h5>
                             <button type="button" className="btn-close" onClick={onClose}></button>
@@ -107,23 +107,25 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
                         <div className="modal-body">
                             {/* 1. Column Name */}
                             <div className="mb-4">
-                                <label className="fw-bold small mb-4">Column Name *</label>
+                                <label className="fw-bold small mb-2">Column Name <span className="text-danger">*</span></label>
                                 <input 
                                     type="text" 
                                     className="form-control" 
                                     placeholder="e.g., Total Score"
                                     value={colName}
                                     onChange={(e) => setColName(e.target.value)}
+                                    style={{ fontSize: '14px', padding: '10px' }}
                                 />
                             </div>
 
                             {/* 2. Formula Type */}
                             <div className="mb-4">
-                                <label className="fw-bold small mb-1">Formula Type *</label>
+                                <label className="fw-bold small mb-2">Formula Type <span className="text-danger">*</span></label>
                                 <select 
                                     className="form-select"
                                     value={formulaType}
                                     onChange={(e) => setFormulaType(e.target.value)}
+                                    style={{ fontSize: '14px', padding: '10px' }}
                                 >
                                     {FORMULA_TYPES.map(ft => (
                                         <option key={ft.value} value={ft.value}>{ft.label}</option>
@@ -133,22 +135,22 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
 
                             {/* 3. Select Columns (Multi-Select Dropdown) */}
                             <div className="mb-4" ref={dropdownRef}>
-                                <label className="fw-bold small mb-1">Select Columns *</label>
+                                <label className="fw-bold small mb-2">Select Columns <span className="text-danger">*</span></label>
                                 
                                 <div 
                                     className="form-control d-flex flex-wrap align-items-center gap-2" 
-                                    style={{ minHeight: '42px', cursor: 'pointer', backgroundColor: '#fff' }}
+                                    style={{ minHeight: '45px', cursor: 'pointer', backgroundColor: '#fff', padding: '8px' }}
                                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                 >
                                     {selectedCols.length === 0 && (
-                                        <span className="text-muted small">Search and select columns...</span>
+                                        <span className="text-muted small">Search columns...</span>
                                     )}
 
                                     {selectedCols.map(key => {
                                         const col = existingColumns.find(c => c.key === key);
                                         return (
-                                            <span key={key} className="badge bg-success-subtle text-success border border-success-subtle rounded-pill d-flex align-items-center px-2 py-1">
-                                                {col ? col.label : key}
+                                            <span key={key} className="badge bg-success-subtle text-success border border-success-subtle rounded-pill d-flex align-items-center px-2 py-1" style={{fontSize: '12px'}}>
+                                                <span className="text-truncate" style={{maxWidth: '100px'}}>{col ? col.label : key}</span>
                                                 <i 
                                                     className="bi bi-x ms-1 cursor-pointer" 
                                                     style={{ fontSize: '1.1em' }}
@@ -162,7 +164,7 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
                                 </div>
 
                                 {isDropdownOpen && (
-                                    <div className="card shadow-sm w-100 mt-1 overflow-hidden" style={{ maxHeight: '200px' }}>
+                                    <div className="card shadow-sm w-100 mt-1 overflow-hidden" style={{ maxHeight: '200px', zIndex: 1060 }}>
                                         <div className="p-2 border-bottom bg-light">
                                             <input 
                                                 type="text" 
@@ -175,7 +177,7 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
                                             />
                                         </div>
                                         
-                                        <div className="list-group list-group-flush overflow-auto" style={{maxHeight: '200px' }}>
+                                        <div className="list-group list-group-flush overflow-auto" style={{maxHeight: '160px' }}>
                                             {filteredColumns.length > 0 ? (
                                                 filteredColumns.map(col => {
                                                     const isSelected = selectedCols.includes(col.key);
@@ -185,6 +187,7 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
                                                             type="button"
                                                             className={`list-group-item list-group-item-action small d-flex justify-content-between align-items-center text-black ${isSelected ? 'bg-light' : ''}`}
                                                             onClick={() => isSelected ? handleRemoveColumn(col.key, { stopPropagation: () => {} }) : handleSelectColumn(col.key)}
+                                                            style={{ fontSize: '14px', padding: '10px 15px' }}
                                                         >
                                                             <span>{col.label}</span>
                                                             {isSelected && <i className="bi bi-check-circle-fill text-success "></i>}
@@ -200,7 +203,7 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
                             </div>
                         </div>
 
-                        <div className="modal-footer border-top-0 pt-0">
+                        <div className="modal-footer border-top-0 pt-0 pb-3">
                             <button className="btn btn-light rounded-pill" onClick={onClose}>Cancel</button>
                             <button className="btn btn-success text-white rounded-3 px-4 btn-add-column-action" onClick={handleSave}>
                                 Add Column
@@ -213,7 +216,7 @@ const AddCalculatedColumnModal = ({ show, onClose, onSave, existingColumns }) =>
             {/* --- ERROR / ATTENTION MODAL --- */}
             {showError && (
                 <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
-                    <div className="modal-dialog modal-dialog-centered modal-sm">
+                    <div className="modal-dialog modal-dialog-centered modal-sm mx-4 mx-md-auto">
                         <div className="modal-content shadow-sm border-0 rounded-4">
                             <div className="modal-body text-center p-4">
                                 <div className="mb-3 text-warning bg-warning-subtle rounded-circle d-inline-flex align-items-center justify-content-center" style={{ width: '60px', height: '60px' }}>

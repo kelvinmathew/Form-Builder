@@ -265,7 +265,7 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
 
             case 'file':
                 inputElement = (
-                    <div className={`file-upload-zone p-5 border-2 border-dashed rounded-4 text-center ${error ? 'border-danger bg-danger-subtle' : 'border-secondary-subtle bg-light-subtle'}`} style={{transition: 'all 0.2s'}}>
+                    <div className={`file-upload-zone p-3 p-md-5 border-2 border-dashed rounded-4 text-center ${error ? 'border-danger bg-danger-subtle' : 'border-secondary-subtle bg-light-subtle'}`} style={{transition: 'all 0.2s'}}>
                          <div className="mb-3">
                             <i className="bi bi-cloud-arrow-up text-primary" style={{fontSize: '2.5rem'}}></i>
                          </div>
@@ -281,9 +281,9 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
                             />
                          </label>
                          {value && (
-                            <div className="mt-3 p-2 bg-white rounded border d-inline-flex align-items-center animate-up">
+                            <div className="mt-3 p-2 bg-white rounded border d-inline-flex align-items-center animate-up" style={{maxWidth: '100%', overflow: 'hidden'}}>
                                 <i className="bi bi-file-earmark-check text-success me-2"></i>
-                                <span className="fw-bold text-dark" style={{fontSize: '13px'}}>{value.split('\\').pop()}</span>
+                                <span className="fw-bold text-dark text-truncate" style={{fontSize: '13px', maxWidth: '150px'}}>{value.split('\\').pop()}</span>
                             </div>
                          )}
                     </div>
@@ -345,7 +345,7 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
 
         return (
             <div className="col-12 animate-up" key={key}>
-                <div className="form-group-container mb-1">
+                <div className="form-group-container mb-3">
                     {labelElement}
                     {inputElement}
                     {errorElement}
@@ -355,7 +355,7 @@ const CustomFormRenderer = ({ schema, initialData, onFormReady }) => {
     };
 
     return (
-        <div className="custom-form-renderer px-1">
+        <div className="custom-form-renderer px-1 pb-3">
             <style>{`
                 .custom-form-renderer {
                     font-family: 'Inter', system-ui, -apple-system, sans-serif;

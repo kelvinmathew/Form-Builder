@@ -52,7 +52,7 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
 
       {/* --- HEADER SECTION --- */}
       <div className="bg-light border-bottom sticky-top" style={{ zIndex: 100 }}>
-        <div className="container px-4 px-lg-5 py-4">
+        <div className="container px-3 px-lg-5 py-4">
           <div className="row align-items-center g-3">
             <div className="col-12 col-md-6">
               {/* Heading updated to 16px */}
@@ -77,7 +77,7 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
       </div>
 
       {/* --- CONTENT SECTION --- */}
-      <div className="container px-4 px-lg-5 py-5">
+      <div className="container px-3 px-lg-5 py-5">
         {forms.length === 0 ? (
           <div className="text-center py-5">
             <div className="d-inline-flex align-items-center justify-content-center mb-4 rounded-circle"
@@ -113,11 +113,11 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                   borderRadius: "16px",
                   cursor: "pointer",
                   transition: "all 0.2s ease-in-out",
-                  backgroundColor: "#FAFAFA" // Changed from #fff to #FAFAFA (Off-white)
+                  backgroundColor: "#FAFAFA"
                 }}
               >
-                <div className="card-body p-4 d-flex align-items-center">
-                  <div className="me-4 d-none d-sm-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
+                <div className="card-body p-3 p-md-4 d-flex align-items-center">
+                  <div className="me-3 me-md-4 d-none d-sm-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
                     style={{ width: "56px", height: "56px", backgroundColor: "#F3F4F6", color: "#6B7280" }}
                   >
                     <i className="bi bi-file-earmark-text fs-4"></i>
@@ -173,7 +173,7 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
 
             {/* --- PAGINATION CONTROLS (CENTERED) --- */}
             {forms.length > 0 && (
-              <div className="d-flex justify-content-center align-items-center mt-4 gap-2"> 
+              <div className="d-flex justify-content-center align-items-center mt-4 gap-2 flex-wrap"> 
                 <button
                   className="btn btn-white border shadow-sm"
                   onClick={() => paginate(currentPage - 1)}
@@ -183,26 +183,28 @@ const Dashboard = ({ forms, onCreate, onEdit, onDelete, onOpen }) => {
                   <i className="bi bi-chevron-left"></i>
                 </button>
 
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <button
-                    key={i + 1}
-                    onClick={() => paginate(i + 1)}
-                    className={`btn shadow-sm fw-semibold ${currentPage === i + 1 ? 'text-white' : 'text-dark bg-white border'}`}
-                    style={{
-                      borderRadius: "8px",
-                      backgroundColor: currentPage === i + 1 ? "#4F46E5" : "#fff",
-                      width: "35px",
-                      height: "35px",
-                      padding: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      ...fontStyleMain // Ensures number is 14px
-                    }}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
+                <div className="d-flex gap-2 justify-content-center flex-wrap">
+                    {Array.from({ length: totalPages }, (_, i) => (
+                    <button
+                        key={i + 1}
+                        onClick={() => paginate(i + 1)}
+                        className={`btn shadow-sm fw-semibold ${currentPage === i + 1 ? 'text-white' : 'text-dark bg-white border'}`}
+                        style={{
+                        borderRadius: "8px",
+                        backgroundColor: currentPage === i + 1 ? "#4F46E5" : "#fff",
+                        width: "35px",
+                        height: "35px",
+                        padding: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        ...fontStyleMain
+                        }}
+                    >
+                        {i + 1}
+                    </button>
+                    ))}
+                </div>
 
                 <button
                   className="btn btn-white border shadow-sm"

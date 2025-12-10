@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
-const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
+const DataEntryList = ({ data, columnOrder, allComponents, onEdit, onDelete }) => {
     // --- PAGINATION STATE ---
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
@@ -13,13 +13,24 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
     const totalPages = Math.ceil(data.length / itemsPerPage);
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-    // Show 4 preview keys
-    const previewKeys = columnOrder.slice(0, 4);
+    // --- PREVIEW KEY LOGIC ---
+    const previewKeys = useMemo(() => {
+        const userSelectedKeys = allComponents
+            .filter(comp => comp.showInList === true)
+            .map(comp => comp.key);
 
-    const fontStyleText = { fontSize: "14px" };
+        if (userSelectedKeys.length > 0) {
+            return userSelectedKeys;
+        }
+        return columnOrder.slice(0, 4);
+    }, [allComponents, columnOrder]);
+
+    const fontStyleText = { fontSize: "14px", color: "#374151" };
+    const headerStyle = { fontSize: '15px', color: '#111827', fontWeight: '700' };
 
     return (
-        <div className="d-flex flex-column gap-3">
+        // Changed width to 100% to fit mobile screens, but kept max-width for desktop look
+        <div className="d-flex flex-column gap-3" style={{ width: '100%', maxWidth: '610px' }}>
             
             {/* List Meta Header */}
             {data.length > 0 && (
@@ -30,36 +41,68 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
                 </div>
             )}
 
-            {currentData.map((row, idx) => {
-                const absoluteRowNumber = indexOfFirstItem + idx + 1;
-
-                return (
-                    <div
-                        key={row._rowId || idx}
-                        className="card border-0 shadow-sm w-100 cursor-pointer entry-card"
-                        onClick={() => onEdit(row)}
-                        style={{ borderRadius: "12px", transition: "all 0.2s ease-in-out", backgroundColor: "#fff" }}
-                        onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 20px rgba(201, 28, 28, 0.08)"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(143, 34, 34, 0.04)"; }}
-                    >
-                        <div className="card-body p-4 d-flex align-items-center">
+            {/* TABLE CONTAINER */}
+            <div className="table-responsive bg-white rounded-3 shadow-sm border">
+                <table className="table table-hover align-middle mb-0 w-100">
+                    <thead className="bg-light border-bottom">
+                        <tr>
+                            {/* ID Header */}
+                            <th className="py-3 text-center" style={{ ...headerStyle, width: '60px' }}>#</th>
                             
-                            {/* 1. LEFT: ID + Date (Stacked) */}
-                            <div className="me-5 d-flex flex-column align-items-start" style={{ minWidth: "100px" }}>
-                                <div className="rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-1 fw-bold mb-2" style={fontStyleText}>
-                                    <i className="bi bi-hash me-1"></i> {absoluteRowNumber}
-                                </div>
-                                <div className="d-flex align-items-center text-muted" style={fontStyleText}>
-                                    {/* UPDATED: Calendar Icon */}
-                                    <i className="bi bi-calendar4 me-2"></i>
-                                    {/* Format Date only */}
-                                    <span>{row.createdAt ? row.createdAt.split(',')[0] : 'No Date'}</span>
-                                </div>
-                            </div>
+                            {/* Date Header */}
+                            <th className="py-3 ps-3" style={{ ...headerStyle, width: '150px' }}>Date</th>
+                            
+                            {/* Dynamic Headers */}
+                            {previewKeys.map(key => {
+                                const comp = allComponents.find(c => c.key === key);
+                                return (
+                                    <th 
+                                        key={key} 
+                                        className="py-3 px-2 text-capitalize" 
+                                        style={{ ...headerStyle, width: 'auto', minWidth: '100px', maxWidth: '200px' }}
+                                    >
+                                        {comp?.label || key}
+                                    </th>
+                                );
+                            })}
+                            
+                            {/* Action Header */}
+                            <th className="py-3 text-start ps-2" style={{ ...headerStyle }}>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {currentData.map((row, idx) => {
+                            const absoluteRowNumber = indexOfFirstItem + idx + 1;
+                            const isDraft = row._isDraft;
 
-                            {/* 2. MIDDLE: Data Columns (Horizontal Layout) */}
-                            <div className="flex-grow-1 d-none d-md-flex align-items-center ">
-                                <div className="row w-100 ">
+                            return (
+                                <tr key={row._rowId || idx} style={{ cursor: 'pointer' }} onClick={() => onEdit(row)}>
+                                    
+                                    {/* ID COLUMN */}
+                                    <td className="text-center">
+                                        <div 
+                                            className={`badge ${isDraft ? 'bg-warning text-dark' : 'bg-primary bg-opacity-10 text-primary'} rounded-pill px-2 py-1`} 
+                                            style={{
+                                                fontSize: '11px', 
+                                                fontWeight: '600',
+                                                letterSpacing: '0.5px'
+                                            }}
+                                        >
+                                            {isDraft ? 'DRAFT' : `#${absoluteRowNumber}`}
+                                        </div>
+                                    </td>
+
+                                    {/* DATE COLUMN */}
+                                    <td className="ps-3">
+                                        <div className="d-flex align-items-center" style={fontStyleText}>
+                                            <i className="bi bi-calendar4 me-2 text-muted" style={{ fontSize: '14px' }}></i>
+                                            <span className="fw-medium" style={{ fontSize: '14px' }}>
+                                                {row.createdAt ? row.createdAt.split(',')[0] : '-'}
+                                            </span>
+                                        </div>
+                                    </td>
+
+                                    {/* DYNAMIC COLUMNS */}
                                     {previewKeys.map(key => {
                                         const comp = allComponents.find(c => c.key === key);
                                         let displayVal = row[key];
@@ -80,100 +123,106 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit }) => {
                                         }
 
                                         return (
-                                            <div key={key} className="col">
-                                                {/* HEADER: Uppercase, Small, Grey, Bold */}
-                                                <div className="text-black fw-bold mb-2 text-uppercase" style={{ fontSize: "11px", letterSpacing: "0.5px" }}>
-                                                    {comp?.label || key}
-                                                </div>
-                                                {/* VALUE: 14px Standard */}
-                                                <div className="text-dark text-truncate fw-medium" style={fontStyleText}>
+                                            <td key={key} className="px-2">
+                                                <div className="text-truncate" style={{ ...fontStyleText, maxWidth: '200px' }}>
                                                     {displayVal ? displayVal : <span className="text-muted opacity-25">-</span>}
                                                 </div>
-                                            </div>
+                                            </td>
                                         );
                                     })}
-                                </div>
-                            </div>
 
-                            {/* 3. RIGHT: Edit Button */}
-                            <div className="ms-4">
-                                <button 
-                                    className="btn d-flex align-items-center justify-content-center"
-                                    style={{ 
-                                        width: "40px", 
-                                        height: "40px", 
-                                        borderRadius: "50%", // Circular button
-                                        backgroundColor: "#eff6ff", 
-                                        color: "#3b82f6", 
-                                        border: "none",
-                                        ...fontStyleText
-                                    }}
-                                >
-                                    <i className="bi bi-pencil-square"></i>
-                                </button>
-                            </div>
+                                    {/* ACTION COLUMN */}
+                                    <td className="text-start ps-2">
+                                        <div className="d-flex align-items-center justify-content-start gap-2">
+                                            {/* Edit Button */}
+                                            <button 
+                                                className="btn btn-sm btn-light border-0 text-primary rounded-circle d-flex align-items-center justify-content-center"
+                                                style={{ width: "32px", height: "32px" }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); 
+                                                    onEdit(row);
+                                                }}
+                                                title="Edit"
+                                            >
+                                                <i className="bi bi-pencil-square" style={{ fontSize: '14px' }}></i>
+                                            </button>
 
-                        </div>
-                    </div>
-                );
-            })}
+                                            {/* Delete Button */}
+                                            <button 
+                                                className="btn btn-sm btn-light border-0 text-danger rounded-circle d-flex align-items-center justify-content-center"
+                                                style={{ width: "32px", height: "32px" }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onDelete(row); 
+                                                }}
+                                                title="Delete"
+                                            >
+                                                <i className="bi bi-trash" style={{ fontSize: '14px' }}></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                        
+                        {data.length === 0 && (
+                            <tr>
+                                <td colSpan={previewKeys.length + 3} className="text-center py-5">
+                                    <div className="text-muted opacity-50 mb-2"><i className="bi bi-inbox fs-1"></i></div>
+                                    <h6 className="text-muted small fw-bold">No entries found</h6>
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
-            {/* --- PAGINATION CONTROLS (CENTERED) --- */}
+            {/* --- PAGINATION CONTROLS --- */}
             {data.length > 0 && (
-              <div className="d-flex justify-content-center align-items-center mt-4 gap-2">
+              <div className="d-flex justify-content-center align-items-center mt-4 gap-2 flex-wrap">
                 <button
                   className="btn btn-white border shadow-sm"
                   onClick={() => paginate(currentPage - 1)}
                   disabled={currentPage === 1}
-                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center", ...fontStyleText }}
+                  style={{ borderRadius: "8px", height: "30px", width: "30px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: '12px' }}
                 >
                   <i className="bi bi-chevron-left"></i>
                 </button>
 
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <button
-                    key={i + 1}
-                    onClick={() => paginate(i + 1)}
-                    className={`btn shadow-sm fw-semibold ${currentPage === i + 1 ? 'text-white' : 'text-dark bg-white border'}`}
-                    style={{
-                      borderRadius: "8px",
-                      backgroundColor: currentPage === i + 1 ? "#4F46E5" : "#fff",
-                      width: "35px",
-                      height: "35px",
-                      padding: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      ...fontStyleText
-                    }}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
+                {/* Wrapper for numbers to allow wrapping on very small screens */}
+                <div className="d-flex flex-wrap gap-2 justify-content-center">
+                    {Array.from({ length: totalPages }, (_, i) => (
+                    <button
+                        key={i + 1}
+                        onClick={() => paginate(i + 1)}
+                        className={`btn shadow-sm fw-semibold ${currentPage === i + 1 ? 'text-white' : 'text-dark bg-white border'}`}
+                        style={{
+                        borderRadius: "8px",
+                        backgroundColor: currentPage === i + 1 ? "#4F46E5" : "#fff",
+                        width: "30px",
+                        height: "30px",
+                        padding: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: '12px'
+                        }}
+                    >
+                        {i + 1}
+                    </button>
+                    ))}
+                </div>
 
                 <button
                   className="btn btn-white border shadow-sm"
                   onClick={() => paginate(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  style={{ borderRadius: "8px", height: "35px", width: "35px", display: "flex", alignItems: "center", justifyContent: "center", ...fontStyleText }}
+                  style={{ borderRadius: "8px", height: "30px", width: "30px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: '12px' }}
                 >
                   <i className="bi bi-chevron-right"></i>
                 </button>
               </div>
             )}
-
-            {data.length === 0 && (
-                <div className="text-center py-5 rounded-4 border border-dashed" style={{backgroundColor: "#f8f9fa"}}>
-                    <i className="bi bi-inbox text-muted fs-1 mb-3 d-block opacity-50"></i>
-                    <h6 className="text-muted fw-bold" style={fontStyleText}>No entries found</h6>
-                    <p className="text-muted mb-0" style={fontStyleText}>Create a new entry to get started.</p>
-                </div>
-            )}
-
-            <style>{`
-                .hover-scale { transition: transform 0.2s; }
-                .hover-scale:hover { transform: scale(1.05); background-color: #eef2ff; }
-            `}</style>
         </div>
     );
 };

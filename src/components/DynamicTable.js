@@ -146,6 +146,32 @@ const DynamicTable = ({
 
     return (
         <div className={`bg-transparent`} onClick={() => setColumnToDelete(null)}>
+            <style>{`
+                /* Responsive styles for DynamicTable */
+                @media (max-width: 768px) {
+                    .report-header-container {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 15px !important;
+                    }
+                    .report-title-centered {
+                        position: static !important;
+                        transform: none !important;
+                        margin-bottom: 10px;
+                        text-align: center;
+                        width: 100%;
+                    }
+                    .report-buttons-group {
+                        width: 100%;
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 10px;
+                    }
+                    .hide-scrollbar {
+                        overflow-x: auto;
+                    }
+                }
+            `}</style>
             
             {/* --- DELETE CONFIRMATION MODAL --- */}
             {columnToDelete && (
@@ -170,20 +196,20 @@ const DynamicTable = ({
 
             {/* --- REPORT MODE HEADER CONTROLS --- */}
             {isReportMode && (
-                <div className="d-flex justify-content-between align-items-center mb-4 position-relative">
+                <div className="d-flex justify-content-between align-items-center mb-4 position-relative report-header-container">
                     {/* LEFT SIDE: Export Buttons */}
-                    <div className="d-flex gap-2 align-items-center">
+                    <div className="d-flex gap-2 align-items-center report-buttons-group">
                         {/* Green Excel Button */}
-                        <button className="btn btn-success text-white rounded-3 border-0" onClick={onExportExcel} style={{backgroundColor: "#107c41", ...fontText}}>
-                            <i className="bi bi-file-earmark-excel me-2"></i>Export Excel
+                        <button className="btn btn-success text-white rounded-3 border-0 flex-grow-1 flex-md-grow-0" onClick={onExportExcel} style={{backgroundColor: "#107c41", ...fontText}}>
+                            <i className="bi bi-file-earmark-excel me-2"></i><span className="d-md-none">Excel</span><span className="d-none d-md-inline">Export Excel</span>
                         </button>
                         {/* Red PDF Button */}
-                        <button className="btn btn-danger text-white rounded-3 border-0" onClick={onExportPDF} style={{backgroundColor: "#dc2626", ...fontText}}>
-                            <i className="bi bi-file-earmark-pdf me-2"></i>Export PDF
+                        <button className="btn btn-danger text-white rounded-3 border-0 flex-grow-1 flex-md-grow-0" onClick={onExportPDF} style={{backgroundColor: "#dc2626", ...fontText}}>
+                            <i className="bi bi-file-earmark-pdf me-2"></i><span className="d-md-none">PDF</span><span className="d-none d-md-inline">Export PDF</span>
                         </button>
                         
                         {/* Theme Color Button */}
-                        <div className="ms-2">
+                        <div className="">
                             <button 
                                 className="btn btn-light border text-muted" 
                                 onClick={() => colorInputRef.current.click()}
@@ -202,14 +228,14 @@ const DynamicTable = ({
                         </div>
                     </div>
 
-                    {/* CENTER: Title (Position Absolute to ensure perfect centering) */}
-                    <span className="fw-bold text-dark position-absolute start-50 translate-middle-x" style={fontHeading}>
+                    {/* CENTER: Title */}
+                    <span className="fw-bold text-dark position-absolute start-50 translate-middle-x report-title-centered" style={fontHeading}>
                         {formTitle || "Report"}
                     </span>
 
                     {/* RIGHT SIDE: Add Column Button */}
-                    <div>
-                        <button className="btn btn-outline-primary text-nowrap rounded-3" onClick={onAddColumn} style={fontText}>
+                    <div className="report-buttons-group mt-2 mt-md-0">
+                        <button className="btn btn-outline-primary text-nowrap rounded-3 w-100" onClick={onAddColumn} style={fontText}>
                             <i className="bi bi-plus me-1"></i> Add Column
                         </button>
                     </div>
@@ -235,7 +261,7 @@ const DynamicTable = ({
                         <div className="row g-4">
                             {localHeaders.map((item, index) => (
                                 <div 
-                                    className="col-md-6 draggable-header-item" 
+                                    className="col-12 col-md-6 draggable-header-item" 
                                     key={item.id}
                                     draggable={true}
                                     onDragStart={(e) => handleHeaderDragStart(e, index)}
@@ -261,11 +287,11 @@ const DynamicTable = ({
             {/* --- 2. DATA TABLE BOX (Separate Curved White Box) --- */}
             <div className="card border shadow-sm rounded-3 overflow-hidden">
                 {!isReportMode && (
-                    <div className="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    <div className="card-header bg-white py-3 px-3 px-md-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <h5 className="fw-bold mb-0" style={fontHeading}>{title}</h5>
                         <div>
                             <button className="btn btn-sm btn-outline-primary me-3" onClick={onAddColumn} style={fontText}><i className="bi bi-plus-circle me-1"></i> Add Column</button>
-                            <small className="text-muted text-end d-inline-block">Drag headers to move columns.</small>
+                            <small className="text-muted text-end d-none d-md-inline-block">Drag headers to move columns.</small>
                         </div>
                     </div>
                 )}
@@ -422,7 +448,8 @@ const DynamicTable = ({
                                         borderBottom: isSignature ? '1px solid black' : 'none', 
                                         paddingBottom: '5px', 
                                         minHeight: '40px',
-                                        width: isSignature ? '300px' : 'auto' 
+                                        width: isSignature ? '300px' : 'auto',
+                                        maxWidth: '100%' 
                                     }}
                                 >
                                     {isSignature && footer.value ? (
