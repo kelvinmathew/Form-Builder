@@ -11,14 +11,24 @@ import DataEntryList from './DataEntryList';
 import DynamicTable from './DynamicTable';
 import { flattenComponents, calculateCellValue } from '../utils/formHelpers';
 
-const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBack }) => {
+// --- API SERVICE IMPORT ---
+import { apiService } from '../services/apiService'; 
+
+const FormEntryManager = ({ form, onBack }) => {
     // --- STATE ---
+    const [entries, setEntries] = useState([]); 
+    const [isLoading, setIsLoading] = useState(false);
+
+    // --- USER SESSION STATE ---
     const [userName, setUserName] = useState("");
     const [isUserSet, setIsUserSet] = useState(false);
     const [tempName, setTempName] = useState(""); 
-    const [showNameModal, setShowNameModal] = useState(false);
+    
+    // New State for User Edit Modal
+    const [showUserModal, setShowUserModal] = useState(false);
+    const [editingName, setEditingName] = useState("");
 
-    // --- PERSISTENCE: LOAD MODE FROM LOCAL STORAGE ---
+    // --- PERSISTENCE ---
     const [mode, setMode] = useState(() => {
         return localStorage.getItem("formEntryMode") || "LIST";
     });
@@ -27,16 +37,12 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         localStorage.setItem("formEntryMode", mode);
     }, [mode]);
 
-    // --- DELETE MODAL STATE ---
+    // --- MODAL STATE ---
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [entryToDelete, setEntryToDelete] = useState(null);
-    
-    // --- OFFCANVAS & DRAFT STATE ---
     const [showOffcanvas, setShowOffcanvas] = useState(false);
     const [offcanvasMode, setOffcanvasMode] = useState("ADD"); 
     const [editingEntry, setEditingEntry] = useState(null);
-    const [tempEntries, setTempEntries] = useState([]); 
-
     const [showCalcModal, setShowCalcModal] = useState(false);
     const [reportThemeColor, setReportThemeColor] = useState("#00B050");
     const [columnOrder, setColumnOrder] = useState([]);
@@ -60,11 +66,42 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         formInstanceRef.current = inst; 
     }, []);
 
-    // --- EFFECTS ---
+    // --- API: FETCH DATA ---
+    const refreshData = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const rawData = await apiService.fetchEntries();
+            
+            // --- FIX: UNWRAP DATA & MAP DATES ---
+            const processedData = rawData.map(item => {
+                const innerData = item.entry_data || item.data || {}; 
+                return { 
+                    ...item, 
+                    ...innerData, 
+                    createdAt: item.created_date,
+                    updatedAt: item.updated_date,
+                    createdBy: item.created_by 
+                };
+            });
+
+            const sorted = processedData.sort((a, b) => b._rowId - a._rowId);
+            setEntries(sorted);
+        } catch (error) {
+            console.error("Failed to fetch entries:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    // --- EFFECT: CHECK USER SESSION ---
     useEffect(() => {
         const savedName = Cookies.get('formUser');
-        if (savedName) { setUserName(savedName); setIsUserSet(true); }
-    }, []);
+        if (savedName) { 
+            setUserName(savedName); 
+            setIsUserSet(true); 
+        }
+        refreshData();
+    }, [refreshData]);
 
     useEffect(() => {
         if (form?.id) localStorage.setItem(`custom_columns_${form.id}`, JSON.stringify(customColumns));
@@ -84,6 +121,21 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         return [...original, ...customColumns];
     }, [form, customColumns]);
 
+    // --- HELPER: PREPARE DATA FOR SAVING ---
+    const extractEntryData = (fullEntry) => {
+        const metadataKeys = [
+            '_rowId', '_isDraft', 'created_by', 'created_date', 'updated_date', 
+            'createdAt', 'updatedAt', 'createdBy', 'status', 'delete_status', 'id'
+        ];
+        const entryData = {};
+        Object.keys(fullEntry).forEach(key => {
+            if (!metadataKeys.includes(key)) {
+                entryData[key] = fullEntry[key];
+            }
+        });
+        return entryData;
+    };
+
     // --- COLUMN DEFINITIONS ---
     const dnComponent = allComponents.find(c => ["delivery note", "dn no.", "dn no", "dn number"].includes(c.label?.trim().toLowerCase()));
     const dnKey = dnComponent ? dnComponent.key : "dnNumber";
@@ -98,11 +150,13 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         if (allComponents.length > 0) {
             const schemaKeys = allComponents.filter(c => c.key !== dnKey && c.key !== remarksKey).map(c => c.key);
             setColumnOrder(prev => {
-                const existingBase = prev.filter(key => schemaKeys.includes(key) || key === 'createdBy' || key === 'createdAt');
+                const existingBase = prev.filter(key => schemaKeys.includes(key) || key === 'createdBy' || key === 'createdAt' || key === 'updatedAt');
                 const newKeys = schemaKeys.filter(key => !existingBase.includes(key));
                 let combined = [...existingBase, ...newKeys];
+                
                 if (!combined.includes('createdBy')) combined.push('createdBy');
-                if (!combined.includes('createdAt')) combined.push('createdAt');
+                if (!combined.includes('updatedAt')) combined.push('updatedAt'); 
+                
                 return combined;
             });
         }
@@ -113,33 +167,59 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         return columnOrder.filter(key => !customKeys.includes(key));
     }, [columnOrder, customColumns]);
 
-    // --- UPDATED SORTING LOGIC: LATEST FIRST (ROBUST FIX) ---
-    const displayedEntries = useMemo(() => {
-        const combined = [...tempEntries, ...entries];
-        return combined.sort((a, b) => {
-            const getTimestamp = (item) => {
-                if (!item || !item._rowId) return 0;
-                
-                const strId = item._rowId.toString();
-                
-                // Case 1: Drafts (format: draft_TIMESTAMP_RANDOM)
-                if (strId.startsWith('draft_')) {
-                    const parts = strId.split('_');
-                    // parts[1] is the timestamp
-                    return Number(parts[1]) || 0;
-                }
+    // --- HANDLER: START SESSION ---
+    const handleStartSession = () => {
+        if (!tempName.trim()) return;
+        Cookies.set('formUser', tempName, { expires: 7 }); 
+        setUserName(tempName);
+        setIsUserSet(true);
+    };
 
-                // Case 2: Saved Entries (format: TIMESTAMP + RANDOM_STRING)
-                // We extract the first 13 characters (standard millisecond timestamp)
-                // This prevents issues where non-numeric random characters cause NaN
-                const timestampStr = strId.substring(0, 13);
-                return Number(timestampStr) || 0;
-            };
+    // --- HANDLER: EDIT USER NAME ---
+    const openUserModal = () => {
+        setEditingName(userName);
+        setShowUserModal(true);
+    };
 
-            // Descending order: B (newer) - A (older)
-            return getTimestamp(b) - getTimestamp(a);
-        });
-    }, [entries, tempEntries]);
+    const handleSaveUserChange = () => {
+        if (!editingName.trim()) return;
+        Cookies.set('formUser', editingName, { expires: 7 });
+        setUserName(editingName);
+        setShowUserModal(false);
+    };
+
+    // --- VIEW: NAME INPUT SCREEN ---
+    if (!form) return <div className="p-5 text-center text-muted">Loading...</div>;
+
+    if (!isUserSet) return ( 
+        <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+            <div className="card shadow-sm border-0 rounded-4 p-4" style={{maxWidth: '400px', width: '100%'}}>
+                <div className="text-center mb-4">
+                    <div className="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style={{width: '60px', height: '60px'}}>
+                        <i className="bi bi-person-fill fs-3"></i>
+                    </div>
+                    <h5 className="fw-bold">Welcome</h5>
+                    <p className="text-muted small">Please enter your name to start.</p>
+                </div>
+                <input 
+                    type="text" 
+                    className="form-control mb-3" 
+                    placeholder="Your Name" 
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleStartSession()}
+                    autoFocus
+                />
+                <button 
+                    className="btn btn-primary w-100 fw-bold" 
+                    onClick={handleStartSession}
+                    disabled={!tempName.trim()}
+                >
+                    Continue
+                </button>
+            </div>
+        </div>
+    );
 
     // --- HANDLERS ---
     const handleNavigationBack = () => { if (mode === "LIST") { onBack?.(); } else { setMode("LIST"); } };
@@ -162,63 +242,75 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         setShowDeleteModal(true);
     };
 
-    const confirmDelete = () => {
-        if (entryToDelete) {
-            if (entryToDelete._isDraft) {
-                setTempEntries(prev => prev.filter(e => e._rowId !== entryToDelete._rowId));
-            } else {
-                onDeleteRow(entryToDelete);
+    const confirmDelete = async () => {
+        if (entryToDelete && entryToDelete._rowId) {
+            try {
+                await apiService.deleteEntry(entryToDelete._rowId);
+                setEntries(prev => prev.filter(e => e._rowId !== entryToDelete._rowId));
+            } catch (error) {
+                alert("Failed to delete entry");
             }
         }
         setShowDeleteModal(false);
         setEntryToDelete(null);
     };
 
+    // --- API: SAVE / UPDATE ---
     const handleSaveDraft = () => {
         if (!formInstanceRef.current) return;
-        formInstanceRef.current.submit().then((submission) => {
-            const timestamp = new Date().toISOString();
-            const displayDate = new Date().toLocaleDateString();
-
-            if (offcanvasMode === "EDIT" && editingEntry) {
-                const updated = { ...editingEntry, ...submission.data, updatedAt: timestamp };
-                if (editingEntry._isDraft) {
-                    setTempEntries(prev => prev.map(e => e._rowId === editingEntry._rowId ? updated : e));
+        
+        formInstanceRef.current.submit().then(async (submission) => {
+            const formData = submission.data;
+            const payload = {
+                entry_data: formData, 
+                created_by: userName 
+            };
+            
+            try {
+                if (offcanvasMode === "EDIT" && editingEntry) {
+                    await apiService.updateEntry(editingEntry._rowId, payload);
+                } else {
+                    await apiService.createEntry(payload);
+                    setFormKey(p => p + 1); 
                 }
-                onUpdate(updated); 
-            } else {
-                const newDraft = {
-                    ...submission.data,
-                    createdAt: displayDate,
-                    createdBy: userName,
-                    updatedAt: timestamp,
-                    _rowId: `draft_${Date.now()}_${Math.random()}`,
-                    _isDraft: true 
-                };
-                setTempEntries(prev => [newDraft, ...prev]);
-                setFormKey(p => p + 1);
+                
+                await refreshData();
+                setShowOffcanvas(false);
+
+            } catch (error) {
+                alert("Failed to save entry. Check network.");
             }
-            setShowOffcanvas(false);
+
         }).catch((err) => console.log("Validation failed", err));
     };
 
-    const handleFinalSaveAll = () => {
-        if (tempEntries.length === 0) return;
-        const recordsToSave = tempEntries.map(draft => {
-            const { _isDraft, _rowId, ...cleanData } = draft;
-            return cleanData;
-        });
-        onSubmit(recordsToSave);
-        setTempEntries([]); 
+    const handleFinalSaveAll = async () => {
+        const hasDrafts = entries.some(e => e.status === 0);
+        if (!hasDrafts) return;
+
+        try {
+            await apiService.submitAllDrafts();
+            await refreshData(); 
+        } catch (error) {
+            alert("Failed to submit drafts");
+        }
     };
 
-    const handleCellUpdate = (rowId, key, newValue) => {
-        const isDraft = rowId.toString().startsWith('draft_');
-        if (isDraft) {
-            setTempEntries(prev => prev.map(e => e._rowId === rowId ? { ...e, [key]: newValue } : e));
-        } else {
+    // --- API: INLINE UPDATE ---
+    const handleCellUpdate = async (rowId, key, newValue) => {
+        setEntries(prev => prev.map(e => e._rowId === rowId ? { ...e, [key]: newValue } : e));
+
+        try {
             const entry = entries.find(e => e._rowId === rowId);
-            if (entry) onUpdate({ ...entry, [key]: newValue });
+            if (!entry) return;
+
+            const currentEntryData = extractEntryData(entry);
+            currentEntryData[key] = newValue;
+
+            await apiService.updateEntry(rowId, { entry_data: currentEntryData });
+        } catch (error) {
+            console.error("Cell update failed", error);
+            refreshData(); 
         }
     };
 
@@ -233,7 +325,12 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
     };
 
     // --- EXPORTS ---
-    const getLabel = (key) => { const comp = allComponents.find(c => c.key === key); return comp ? comp.label : key; };
+    const getLabel = (key) => { 
+        if (key === 'updatedAt') return 'Updated Date';
+        if (key === 'createdBy') return 'Created By';
+        const comp = allComponents.find(c => c.key === key); 
+        return comp ? comp.label : key; 
+    };
     const formatExportValue = (val) => {
         if (val === undefined || val === null) return "";
         if (Array.isArray(val)) return val.map(item => typeof item === 'object' ? item.label || item.value : item).join(", ");
@@ -255,17 +352,27 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
             sheetData.push(r);
         }
         sheetData.push([""]); 
-        const tableHeader = [];
+        
+        // CHANGED: Added "S.No" as the first column header
+        const tableHeader = ["S.No"];
         if (showDnColumn) tableHeader.push(dnLabel);
         columnOrder.forEach(k => tableHeader.push(getLabel(k)));
         if (showRemarksColumn) tableHeader.push("Remarks");
         sheetData.push(tableHeader);
-        displayedEntries.forEach(row => {
-            const rData = [];
+        
+        entries.forEach((row, index) => { // CHANGED: Added index parameter
+            // CHANGED: Added index + 1 as the first cell value
+            const rData = [index + 1]; 
+            
             if (showDnColumn) rData.push(row[dnKey] || "");
             columnOrder.forEach(key => {
                 const conf = allComponents.find(c => c.key === key);
                 let val = (conf?.type === 'calculated') ? calculateCellValue(row, conf) : row[key];
+                
+                if ((key === 'updatedAt' || key === 'createdAt') && val) {
+                    val = new Date(val).toLocaleString();
+                }
+
                 if (conf && ['select','radio','checkbox'].includes(conf.type)) {
                    const options = conf.values || conf.data?.values || [];
                    if(options.length > 0){
@@ -281,15 +388,6 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
             });
             if (showRemarksColumn) rData.push(row[remarksKey] || "");
             sheetData.push(rData);
-        });
-
-        sheetData.push([""]);
-        sheetData.push([""]); 
-        (pdfLayout.footers || []).forEach(f => {
-            const label = f.label || "";
-            if(f.type === 'image') { sheetData.push([label, "(Image)"]); } 
-            else { sheetData.push([label, f.value]); }
-            sheetData.push([""]); 
         });
 
         const ws = XLSX.utils.aoa_to_sheet(sheetData);
@@ -316,16 +414,25 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
         });
         if ((pdfLayout.headers || []).length % 2 !== 0) y += 8;
         
-        const pdfHeaders = [];
+        // CHANGED: Added "S.No" as the first PDF header
+        const pdfHeaders = ["S.No"];
         if (showDnColumn) pdfHeaders.push(dnLabel);
         columnOrder.forEach(k => pdfHeaders.push(getLabel(k)));
         if (showRemarksColumn) pdfHeaders.push("Remarks");
-        const body = displayedEntries.map(row => {
-            const r = [];
+        
+        const body = entries.map((row, index) => { // CHANGED: Added index parameter
+            // CHANGED: Added index + 1 as the first cell value
+            const r = [index + 1];
+            
             if (showDnColumn) r.push(row[dnKey] || "");
             columnOrder.forEach(key => {
                  const conf = allComponents.find(c => c.key === key);
                 let val = (conf?.type === 'calculated') ? calculateCellValue(row, conf) : row[key];
+                
+                if ((key === 'updatedAt' || key === 'createdAt') && val) {
+                    val = new Date(val).toLocaleString();
+                }
+
                 if (conf && ['select','radio','checkbox'].includes(conf.type)) {
                    const options = conf.values || conf.data?.values || [];
                    if(options.length > 0){
@@ -364,16 +471,16 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
     };
 
     if (!form) return <div className="p-5 text-center text-muted">Loading...</div>;
-    if (!isUserSet) return ( <div className="p-5 text-center"><button className="btn btn-primary" onClick={()=>{setUserName("User"); setIsUserSet(true)}}>Start</button></div>);
 
     const textStyle = { fontSize: "14px" };
     const headingStyle = { fontSize: "16px", fontWeight: "bold" };
+
+    const hasDrafts = entries.some(e => e.status === 0);
 
     return (
         <div className="min-vh-100" style={{ backgroundColor: "#F3F4F6" }}>
             <AddCalculatedColumnModal show={showCalcModal} onClose={() => setShowCalcModal(false)} onSave={(newCol) => { setCustomColumns(p => [...p, newCol]); setShowCalcModal(false); }} existingColumns={allComponents.filter(c => c.key !== dnKey && c.key !== remarksKey)} />
             
-            {/* --- OFFCANVAS (FORM) --- */}
             <div className={`offcanvas offcanvas-end ${showOffcanvas ? 'show' : ''}`} style={{ width: '500px', visibility: showOffcanvas ? 'visible' : 'hidden', transition: 'transform 0.3s ease-in-out', zIndex: 1045 }} tabIndex="-1">
                 <div className="offcanvas-header border-bottom">
                     <h5 className="offcanvas-title fw-bold">{offcanvasMode === "EDIT" ? "Edit Entry" : "New Entry"}</h5>
@@ -388,9 +495,8 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                     />
                 </div>
                 <div className="offcanvas-footer border-top p-3 bg-white d-flex justify-content-end">
-                    {/* UPDATED: Added fontSize: 14px to button */}
-                    <button className="btn btn-primary w-100" onClick={handleSaveDraft} style={{ fontSize: '14px' }}>
-                        Save Draft
+                    <button className="btn btn-primary w-0" onClick={handleSaveDraft} style={{ fontSize: '14px' }}>
+                        {offcanvasMode === "EDIT" ? "Update Entry" : "Save Draft"}
                     </button>
                 </div>
             </div>
@@ -403,85 +509,110 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                         <div className="d-flex align-items-center gap-3">
                             <button onClick={handleNavigationBack} className="btn btn-white border shadow-sm rounded-circle d-flex align-items-center justify-content-center" style={{ width: "40px", height: "40px" }}><i className="bi bi-arrow-left"></i></button>
                             <div>
-                                <h5 className="text-dark mb-0" style={headingStyle}>{form.title}</h5>
-                                <small className="text-muted" style={textStyle}>{mode === "LIST" ? "Entries List" : "All Records"}</small>
+                                <h5 className="text-dark mb-1" style={headingStyle}>{form.title}</h5>
+                                
+                                {/* REFACTORED: Entry Type + User Name in the same line */}
+                                <div className="d-flex align-items-center gap-2 small text-muted">
+                                    <span style={textStyle}>{mode === "LIST" ? "Entries List" : "All Records"}</span>
+                                    
+                                   { /* Separator */}
+                                    <span className="opacity-120"></span>
+                                    
+                                    {/* User Name with Edit Icon (Opens Modal) */}
+                                    <div 
+                                        className="d-flex align-items-center gap-1 text-muted cursor-pointer" 
+                                        onClick={openUserModal} 
+                                        title="Edit User Name"
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <i className="bi bi-person text-primary"></i>
+                                        <span className="fw-medium">{userName}</span>
+                                        <i className="btn btn-sm btn-light border-0 text-primary rounded-circle d-flex align-items-center justify-content-center bi bi-pencil-square text-primary ms-1" style={{ fontSize: '13px' }}></i>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div className="d-flex gap-2">
-                            <button className={`btn shadow-sm rounded-3 px-3 ${mode === "LIST" ? "btn-white border fw-bold text-dark" : "btn-light text-muted border-0"}`} onClick={() => setMode("LIST")} style={textStyle}><i className="bi bi-list-ul me-2"></i> Entries</button>
-                            <button className={`btn shadow-sm rounded-3 px-3 ${mode === "ALL_DATA" ? "btn-white border fw-bold text-dark" : "btn-light text-muted border-0"}`} onClick={() => setMode("ALL_DATA")} style={textStyle}><i className="bi bi-table me-2"></i> All Data</button>
+                            {/* REMOVED OLD USER BUTTON FROM HERE */}
+
+                            
+                          {/* <button className={`btn shadow-sm rounded-3 px-3 ${mode === "LIST" ? "btn-white border fw-bold text-dark" : "btn-light text-muted border-0"}`} onClick={() => setMode("LIST")} style={textStyle}><i className="bi bi-list-ul me-2"></i> Entries</button> */}
+
+                            <button className={`btn shadow-sm rounded-3 px-2 ${mode === "ALL_DATA" ? "btn-white border fw-bold text-success" : "btn-light text-muted border-0"}`} onClick={() => setMode("ALL_DATA")} style={textStyle}><i className="bi bi-table me-2"></i> All Records</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div className="container px-2 px-md-4 py-4">
-                {mode === "LIST" && (
-                    <div className="animate-fade-in">
-                        <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-                             <div>
-                                <h4 className="fw-bold mb-1" style={headingStyle}>Entries</h4>
-                                <p className="text-muted mb-0" style={textStyle}>View all individual entries.</p>
-                             </div>
-                             <div className="d-flex gap-2">
-                                {tempEntries.length > 0 && (
-                                    <button className="btn btn-success shadow-sm rounded-3 animate-up" onClick={handleFinalSaveAll} style={textStyle}>
-                                        <i className="bi bi-check-circle-fill me-1"></i> Save All ({tempEntries.length})
-                                    </button>
-                                )}
-                                <button className="btn btn-primary shadow-sm rounded-3" onClick={() => openOffcanvas(null)} style={textStyle}>
-                                    <i className="bi bi-plus-lg me-1"></i> New Entry
-                                </button>
-                             </div>
+                {isLoading ? (
+                    <div className="text-center py-5">
+                        <div className="spinner-border text-primary" role="status">
+                            <span className="visually-hidden">Loading...</span>
                         </div>
-                        
-                        <div className="row">
-                            <div className="col-lg-9 col-xl-8">
-                                <DataEntryList 
-                                    data={displayedEntries} 
-                                    columnOrder={listColumnOrder} 
+                    </div>
+                ) : (
+                    <>
+                        {mode === "LIST" && (
+                            <div className="animate-fade-in">
+                                <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+                                     <div>
+                                        <h4 className="fw-bold mb-1" style={headingStyle}>Entries</h4>
+                                        <p className="text-muted mb-0" style={textStyle}>View all individual entries.</p>
+                                     </div>
+                                     <div className="d-flex gap-2">
+                                        {hasDrafts && (
+                                            <button className="btn btn-success shadow-sm rounded-3 animate-up" onClick={handleFinalSaveAll} style={textStyle}>
+                                                <i className="bi bi-check-circle-fill me-1"></i> Submit All Drafts
+                                            </button>
+                                        )}
+                                        <button className="btn btn-primary shadow-sm rounded-3" onClick={() => openOffcanvas(null)} style={textStyle}>
+                                            <i className="bi bi-plus-lg me-1"></i> New Entry
+                                        </button>
+                                     </div>
+                                </div>
+                                
+                                <div className="row">
+                                    <div className="col-lg-9 col-xl-8">
+                                        <DataEntryList 
+                                            data={entries} 
+                                            columnOrder={listColumnOrder} 
+                                            allComponents={allComponents} 
+                                            onEdit={(row) => openOffcanvas(row)} 
+                                            onDelete={handleRequestDelete}
+                                        />
+                                    </div>
+                                    <div className="col-lg-3 col-xl-4 d-none d-lg-block"></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {mode === "ALL_DATA" && (
+                            <div className="animate-fade-in bg-white p-4 shadow-sm" style={{ minHeight: "800px", overflowX: 'auto' }}>
+                                <DynamicTable 
+                                    data={entries} title="Master Report" formTitle={form.title} isReportMode={true}
+                                    columnOrder={columnOrder} 
                                     allComponents={allComponents} 
-                                    onEdit={(row) => openOffcanvas(row)} 
-                                    onDelete={handleRequestDelete}
+                                    customColumns={customColumns} 
+                                    projectDetails={projectDetails}
+                                    dnKey={dnKey} dnLabel={dnLabel} remarksKey={remarksKey}
+                                    themeColor={reportThemeColor} 
+                                    onThemeColorChange={setReportThemeColor}
+                                    onAddColumn={() => setShowCalcModal(true)} 
+                                    onDeleteColumn={(k) => { setCustomColumns(p => p.filter(c => c.key !== k)); setColumnOrder(p => p.filter(x => x !== k)); }}
+                                    onColumnDrop={handleColumnDrop} 
+                                    onUpdateEntry={handleCellUpdate} 
+                                    onDeleteRow={handleRequestDelete}
+                                    onExportExcel={handleExportExcel} onExportPDF={handleExportPDF}
+                                    onLayoutChange={(newLayout) => setPdfLayout(newLayout)}
                                 />
                             </div>
-                            <div className="col-lg-3 col-xl-4 d-none d-lg-block"></div>
-                        </div>
-                    </div>
-                )}
-
-                {mode === "ALL_DATA" && (
-                    <div className="animate-fade-in bg-white p-4 shadow-sm" style={{ minHeight: "800px", overflowX: 'auto' }}>
-                        <DynamicTable 
-                            data={displayedEntries} title="Master Report" formTitle={form.title} isReportMode={true}
-                            columnOrder={columnOrder} 
-                            allComponents={allComponents} 
-                            customColumns={customColumns} 
-                            projectDetails={projectDetails}
-                            dnKey={dnKey} dnLabel={dnLabel} remarksKey={remarksKey}
-                            themeColor={reportThemeColor} 
-                            onThemeColorChange={setReportThemeColor}
-                            onAddColumn={() => setShowCalcModal(true)} 
-                            onDeleteColumn={(k) => { setCustomColumns(p => p.filter(c => c.key !== k)); setColumnOrder(p => p.filter(x => x !== k)); }}
-                            onColumnDrop={handleColumnDrop} onUpdateEntry={handleCellUpdate} 
-                            onDeleteRow={handleRequestDelete}
-                            onExportExcel={handleExportExcel} onExportPDF={handleExportPDF}
-                            onLayoutChange={(newLayout) => setPdfLayout(newLayout)}
-                        />
-                    </div>
+                        )}
+                    </>
                 )}
             </div>
-
-            <style>{`
-                .offcanvas { box-shadow: -5px 0 15px rgba(0,0,0,0.1); }
-                .form-control, .form-select { height: 38px !important; min-height: 38px !important; padding: 4px 12px !important; font-size: 14px !important; border-radius: 6px !important; }
-                textarea.form-control { height: auto !important; min-height: 80px !important; }
-                label { font-size: 14px !important; font-weight: 600 !important; margin-bottom: 4px !important; color: #4b5563; }
-                .animate-up { animation: fadeInUp 0.3s ease-out; }
-                @keyframes fadeInUp { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-            `}</style>
             
-            {/* Delete Modal - Included to ensure no missing variables */}
+            {/* DELETE MODAL */}
             {showDeleteModal && (
                 <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1055 }}>
                     <div className="modal-dialog modal-dialog-centered modal-sm">
@@ -493,6 +624,38 @@ const FormEntryManager = ({ form, entries, onSubmit, onUpdate, onDeleteRow, onBa
                                 <div className="d-flex gap-2 justify-content-center">
                                     <button className="btn btn-outline-secondary btn-sm rounded-6 px-3" onClick={() => setShowDeleteModal(false)}>Cancel</button>
                                     <button className="btn btn-danger btn-sm rounded-6 px-3" onClick={confirmDelete}>Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* USER EDIT MODAL (New Modern Style) */}
+            {showUserModal && (
+                <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1055 }}>
+                    <div className="modal-dialog modal-dialog-centered modal-sm">
+                        <div className="modal-content shadow-sm border-0 rounded-4">
+                            <div className="modal-body p-4">
+                                <div className="text-center mb-3">
+                                    <div className="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style={{width: '50px', height: '50px'}}>
+                                        <i className="bi bi-person-fill fs-3"></i>
+                                    </div>
+                                    <h6 className="fw-bold text-dark">Change Name</h6>
+                                </div>
+                                
+                                <input 
+                                    type="text" 
+                                    className="form-control mb-4" 
+                                    value={editingName} 
+                                    onChange={(e) => setEditingName(e.target.value)}
+                                    placeholder="Enter your name"
+                                    autoFocus
+                                />
+
+                                <div className="d-flex gap-2 justify-content-center">
+                                    <button className="btn btn-outline-secondary btn-sm px-3" onClick={() => setShowUserModal(false)}>Cancel</button>
+                                    <button className="btn btn-primary btn-sm px-3" onClick={handleSaveUserChange}>Save Changes</button>
                                 </div>
                             </div>
                         </div>

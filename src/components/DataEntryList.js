@@ -97,7 +97,8 @@ const DataEntryList = ({ data, columnOrder, allComponents, onEdit, onDelete }) =
                                         <div className="d-flex align-items-center" style={fontStyleText}>
                                             <i className="bi bi-calendar4 me-2 text-muted" style={{ fontSize: '14px' }}></i>
                                             <span className="fw-medium" style={{ fontSize: '14px' }}>
-                                                {row.createdAt ? row.createdAt.split(',')[0] : '-'}
+                                                {/* FIXED: Split by 'T' to handle ISO date format correctly */}
+                                                {row.createdAt ? row.createdAt.split('T')[0] : '-'}
                                             </span>
                                         </div>
                                     </td>

@@ -28,18 +28,11 @@ const DynamicTable = ({
     const [draggedColumn, setDraggedColumn] = useState(null);
     const [editingCell, setEditingCell] = useState(null); 
     
-    // Header Reordering State
     const [localHeaders, setLocalHeaders] = useState([]);
     const [draggedHeader, setDraggedHeader] = useState(null);
-
-    // Footer Reordering State
     const [localFooters, setLocalFooters] = useState([]);
     const [draggedFooter, setDraggedFooter] = useState(null);
-
-    // --- Modal State ---
     const [columnToDelete, setColumnToDelete] = useState(null);
-
-    // 2. Create a Ref to trigger the hidden color input
     const colorInputRef = useRef(null);
 
     // --- Logic ---
@@ -97,7 +90,7 @@ const DynamicTable = ({
         cursor: "move", 
         userSelect: "none",
         whiteSpace: "nowrap",
-        ...fontText // 14px for table headers
+        ...fontText 
     });
 
     const handleCellSave = (rowId, key, newValue) => {
@@ -105,10 +98,15 @@ const DynamicTable = ({
         setEditingCell(null);
     };
 
-    const formatDate = (val) => {
+    // --- UPDATED DATE FORMATTER (Includes Time) ---
+    const formatDate = (val, isTime = false) => {
         if (!val) return "";
         const date = new Date(val);
         if (isNaN(date.getTime())) return val; 
+        
+        if(isTime) {
+             return date.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
         return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
@@ -134,6 +132,7 @@ const DynamicTable = ({
     const getColumnLabel = (key, comp) => {
         if (key === 'createdAt') return 'Created Date';
         if (key === 'createdBy') return 'Created By';
+        if (key === 'updatedAt') return 'Updated Date';
         return comp?.label || key;
     };
 
@@ -173,7 +172,6 @@ const DynamicTable = ({
                 }
             `}</style>
             
-            {/* --- DELETE CONFIRMATION MODAL --- */}
             {columnToDelete && (
                 <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
                     <div className="modal-dialog modal-dialog-centered modal-sm">
@@ -194,21 +192,16 @@ const DynamicTable = ({
                 </div>
             )}
 
-            {/* --- REPORT MODE HEADER CONTROLS --- */}
             {isReportMode && (
                 <div className="d-flex justify-content-between align-items-center mb-4 position-relative report-header-container">
-                    {/* LEFT SIDE: Export Buttons */}
                     <div className="d-flex gap-2 align-items-center report-buttons-group">
-                        {/* Green Excel Button */}
                         <button className="btn btn-success text-white rounded-3 border-0 flex-grow-1 flex-md-grow-0" onClick={onExportExcel} style={{backgroundColor: "#107c41", ...fontText}}>
                             <i className="bi bi-file-earmark-excel me-2"></i><span className="d-md-none">Excel</span><span className="d-none d-md-inline">Export Excel</span>
                         </button>
-                        {/* Red PDF Button */}
                         <button className="btn btn-danger text-white rounded-3 border-0 flex-grow-1 flex-md-grow-0" onClick={onExportPDF} style={{backgroundColor: "#dc2626", ...fontText}}>
                             <i className="bi bi-file-earmark-pdf me-2"></i><span className="d-md-none">PDF</span><span className="d-none d-md-inline">Export PDF</span>
                         </button>
                         
-                        {/* Theme Color Button */}
                         <div className="">
                             <button 
                                 className="btn btn-light border text-muted" 
@@ -228,12 +221,10 @@ const DynamicTable = ({
                         </div>
                     </div>
 
-                    {/* CENTER: Title */}
                     <span className="fw-bold text-dark position-absolute start-50 translate-middle-x report-title-centered" style={fontHeading}>
                         {formTitle || "Report"}
                     </span>
 
-                    {/* RIGHT SIDE: Add Column Button */}
                     <div className="report-buttons-group mt-2 mt-md-0">
                         <button className="btn btn-outline-primary text-nowrap rounded-3 w-100" onClick={onAddColumn} style={fontText}>
                             <i className="bi bi-plus me-1"></i> Add Column
@@ -242,21 +233,18 @@ const DynamicTable = ({
                 </div>
             )}
 
-            {/* --- 1. PROJECT DETAILS BOX (Curved White Box) --- */}
             {isReportMode && (
                 <div className="card border shadow-sm mb-4 rounded-3 overflow-hidden">
-                    {/* Header Strip */}
                     <div 
                         className="text-white fw-bold py-2 px-4" 
                         style={{ 
                             backgroundColor: themeColor,
-                            ...fontHeading // 16px
+                            ...fontHeading 
                         }}
                     >
                         Project Details
                     </div>
                     
-                    {/* Details Body */}
                     <div className="p-4 bg-white">
                         <div className="row g-4">
                             {localHeaders.map((item, index) => (
@@ -284,7 +272,6 @@ const DynamicTable = ({
                 </div>
             )}
 
-            {/* --- 2. DATA TABLE BOX (Separate Curved White Box) --- */}
             <div className="card border shadow-sm rounded-3 overflow-hidden">
                 {!isReportMode && (
                     <div className="card-header bg-white py-3 px-3 px-md-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -299,9 +286,11 @@ const DynamicTable = ({
                 <div className="table-responsive hide-scrollbar">
                     <table className={`table mb-0 ${isReportMode ? "table-sm w-100" : ""}`} style={{ minWidth: '100%' }}>
                         <thead>
-                            {/* Report Mode: Table Headers have colored background */}
                             <tr style={{ backgroundColor: isReportMode ? themeColor : "transparent" }}>
-                                {/* CONDITIONAL DN HEADER */}
+                                
+                                {/* CHANGED: Added S.No Column Header */}
+                                <th className="py-3 px-3 text-center text-white" style={{ ...getHeaderStyle(), cursor: 'default', minWidth: '50px', width: '60px' }}>S.No</th>
+
                                 {showDnColumn && (
                                     <th className="py-3 px-3 text-center text-white" style={{ ...getHeaderStyle(), cursor: 'default', minWidth: '63px' }}>{dnLabel}</th>
                                 )}
@@ -336,7 +325,6 @@ const DynamicTable = ({
                                     );
                                 })}
                                 
-                                {/* CONDITIONAL REMARKS HEADER */}
                                 {showRemarksColumn && (
                                     <th className="py-3 px-3 text-center text-white" style={{ ...getHeaderStyle(), cursor: 'default', minWidth: '100px' }}>Remarks</th>
                                 )}
@@ -347,7 +335,12 @@ const DynamicTable = ({
                         <tbody className="bg-white">
                             {data.map((row, idx) => (
                                 <tr key={row._rowId || idx} style={{borderBottom: "1px solid #f0f0f0"}}>
-                                    {/* CONDITIONAL DN CELL */}
+                                    
+                                    {/* CHANGED: Added S.No Column Body (Serial Number) */}
+                                    <td className="px-3 py-3 text-center" style={fontText}>
+                                        {idx + 1}
+                                    </td>
+
                                     {showDnColumn && (
                                         <td className="px-3 py-3 text-center fw-bold" style={fontText}>
                                             {row[dnKey] || "-"}
@@ -359,7 +352,7 @@ const DynamicTable = ({
                                         const isCustom = customColumns.find(c => c.key === key);
                                         const isCalculated = isCustom && isCustom.type === 'calculated';
                                         
-                                        const isReadOnly = key === 'createdBy' || key === 'createdAt';
+                                        const isReadOnly = key === 'createdBy' || key === 'createdAt' || key === 'updatedAt';
                                         
                                         let displayValue = calculateCellValue(row, isCustom || comp || { key });
 
@@ -378,7 +371,15 @@ const DynamicTable = ({
                                             }
                                         }
 
-                                        if (key === 'createdAt' || comp?.type === 'date' || comp?.type === 'datetime') {
+                                        // --- UPDATED DATE FORMATTING ---
+                                        if (key === 'createdAt') {
+                                            displayValue = formatDate(displayValue);
+                                        }
+                                        if (key === 'updatedAt') {
+                                            // True flag passes "Show Time"
+                                            displayValue = formatDate(displayValue, true); 
+                                        }
+                                        if (comp?.type === 'date' || comp?.type === 'datetime') {
                                             displayValue = formatDate(displayValue);
                                         }
 

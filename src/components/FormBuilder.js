@@ -377,8 +377,9 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                 /* MOBILE RESPONSIVE OVERRIDES */
                 @media (max-width: 768px) {
                     .field-types-container {
-                        position: relative !important; top: 0 !important; height: auto !important;
-                        border-radius: 8px; margin-bottom: 20px; box-shadow: none !important; border: 1px solid #dee2e6;
+                        position: sticky !important; top: 70px !important; height: auto !important;
+                        border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important; border: 1px solid #dee2e6;
+                        background: white; z-index: 1010;
                     }
                     .field-sidebar {
                         display: flex; flex-direction: row; overflow-x: auto; padding: 10px; white-space: nowrap; gap: 10px;
@@ -530,8 +531,8 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
 
                 {/* --- 3-COLUMN LAYOUT (RESPONSIVE) --- */}
                 <div className="row g-2 mt-2">
-                    {/* 1. TOOLBOX (Sidebar) -> Mobile Order: 3 (Bottom/Scroll), Desktop: 1 */}
-                    <div className="col-12 col-md-3 order-3 order-md-1">
+                    {/* 1. TOOLBOX (Sidebar) -> Mobile: Order 1 (Top Sticky), Desktop: Left */}
+                    <div className="col-12 col-md-3 order-1 order-md-1">
                         <div className="field-types-container">
                             <div className="d-flex align-items-center p-3 border-bottom mb-2 bg-light">
                                 <div ><i className=" fs-6 bi bi-plus-circle text-primary me-2"></i></div>
@@ -539,7 +540,14 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                             </div>
                             <div className="field-sidebar">
                                 {FIELD_TYPES.map((fieldType) => (
-                                    <div key={fieldType.type} className="field-type-item " draggable onDragStart={(e) => handleDragStart(e, fieldType)} onDoubleClick={() => handleDoubleClick(fieldType)} title="Drag or double-click to add">
+                                    <div 
+                                        key={fieldType.type} 
+                                        className="field-type-item" 
+                                        draggable 
+                                        onDragStart={(e) => handleDragStart(e, fieldType)} 
+                                        onDoubleClick={() => handleDoubleClick(fieldType)} 
+                                        title="Drag or double-click to add"
+                                    >
                                         <i className={`bi ${fieldType.icon}`}></i><span >{fieldType.label}</span>
                                     </div>
                                 ))}
@@ -547,13 +555,13 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                         </div>
                     </div>
 
-                    {/* 2. CANVAS (The Form) -> Mobile Order: 1 (Top), Desktop: 2 */}
-                    <div className="col-12 col-md-5 order-1 order-md-2">
+                    {/* 2. CANVAS (The Form) -> Mobile: Order 2 (Below Toolbox), Desktop: Center */}
+                    <div className="col-12 col-md-5 order-2 order-md-2">
                         <div className={`canvas-area ${draggedItem ? "drag-over" : ""}`} onDragOver={handleDragOver} onDrop={handleDrop}>
                             {fields.length === 0 ? (
                                 <div className="text-center text-muted py-4">
                                     <i className="bi bi-inbox fs-2 d-block mb-2"></i>
-                                    <p style={{ fontSize: '14px' }}>Drag and drop fields here</p>
+                                    <p style={{ fontSize: '14px' }}>Drag and drop or tap fields to add</p>
                                 </div>
                             ) : (
                                 fields.map((field, index) => (
@@ -582,8 +590,8 @@ const FormBuilder = ({ initialData, onSave, onCancel }) => {
                         </div>
                     </div>
 
-                    {/* 3. SETTINGS (Right Panel) -> Mobile Order: 2 (Drawer), Desktop: 3 */}
-                    <div className="col-12 col-md-4 order-2 order-md-3">
+                    {/* 3. SETTINGS (Right Panel) -> Mobile: Order 3 (Fixed Bottom Drawer), Desktop: Right */}
+                    <div className="col-12 col-md-4 order-3 order-md-3">
                         {editingField ? (
                             <div className="settings-panel shadow-sm">
                                 <div className="d-flex align-items-center mb-3 justify-content-between">
